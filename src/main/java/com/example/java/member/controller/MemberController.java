@@ -9,7 +9,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 @Controller
-@RequestMapping("/members")
+@RequestMapping("/member")
 @RequiredArgsConstructor
 public class MemberController {
 
@@ -21,10 +21,10 @@ public class MemberController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestParam String username,
-                        @RequestParam String password,
-                        HttpSession session,
-                        Model model) {
+    public String login(@RequestParam("username") String username,
+            @RequestParam("password") String password,
+            HttpSession session,
+            Model model) {
 
         boolean success = memberLoginService.login(username, password, session);
 
