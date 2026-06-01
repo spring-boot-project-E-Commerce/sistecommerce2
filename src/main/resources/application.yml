@@ -38,3 +38,8 @@ logging:
         orm:
           jdbc:
             bind: trace
+          
+cloudinary:
+  cloud-name: 
+  api-key: 
+  api-secret: 
