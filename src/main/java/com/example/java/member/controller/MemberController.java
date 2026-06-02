@@ -56,9 +56,33 @@ public class MemberController {
     
     @GetMapping("/signup/type")
     public String signupType() {
-        
     	return "member/signup-type";
     }
+    
+    @GetMapping("/signup/terms")
+    public String signupTerms() {
+        return "/member/signup-terms";
+    }
+    
+    @PostMapping("/signup/terms")
+    public String signupTermsOk(
+            @RequestParam(name = "marketing", defaultValue = "false") boolean marketing,
+            HttpSession session) {
+        session.setAttribute("marketing", marketing);
+        return "redirect:/member/signup";
+    }
+    
+    @GetMapping("/signup")
+    public String signup() {
+        return "/member/signup";
+    }
+    
+    @PostMapping("/signup")
+    public String signupOk() {
+    	
+    	return "";
+    }
+    
     
     
 }
