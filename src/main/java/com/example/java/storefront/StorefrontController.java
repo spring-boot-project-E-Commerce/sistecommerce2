@@ -31,6 +31,9 @@ public class StorefrontController {
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "sort", required = false) String sort,
             @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "price", required = false) String price,
+            @RequestParam(value = "rating", required = false) String rating,
+            @RequestParam(value = "hideOutOfStock", required = false) Boolean hideOutOfStock,
             jakarta.servlet.http.HttpSession session,
             Model model) {
         
@@ -60,36 +63,113 @@ public class StorefrontController {
                 default -> "salesCount";
             };
         }
-        
-        Page<ProductDto> productPage = productService.getProductList(categorySeq, keyword, sortBy, page);
+
+        // 가격 필터 파싱 (예: "0-10000", "10000-50000" 등)
+        Integer minPrice = null;
+        Integer maxPrice = null;
+        if (price != null && !price.equals("all") && !price.trim().isEmpty()) {
+            String[] parts = price.split("-");
+            if (parts.length == 2) {
+                try {
+                    minPrice = Integer.parseInt(parts[0]);
+                    if (parts[1].equals("max")) {
+                        maxPrice = 999999999;
+                    } else {
+                        maxPrice = Integer.parseInt(parts[1]);
+                    }
+                } catch (NumberFormatException e) {
+                    // 무시
+                }
+            }
+        }
+
+        // 별점 필터 파싱 (예: "4" -> 4점 이상, "3" -> 3점 이상)
+        Double minRating = null;
+        if (rating != null && !rating.trim().isEmpty()) {
+            try {
+                minRating = Double.parseDouble(rating);
+            } catch (NumberFormatException e) {
+                // 무시
+            }
+        }
+        boolean hideStockVal = hideOutOfStock != null && hideOutOfStock;
+        Page<ProductDto> productPage = productService.getProductList(categorySeq, keyword, sortBy, page, minPrice, maxPrice, minRating, hideStockVal);
         List<ProductDto> productList = productPage.getContent();
         
-        // 추천 상품 목록 (평점 높은 순으로 상위 5개 임의 추출)
+        // 추천 상품 목록 (실제 DB 평점 높은 순 상위 5개 추천)
         List<ProductDto> recommendedList = productService.getProductList(null, null, "rating", 0)
                 .getContent().stream().limit(5).collect(java.util.stream.Collectors.toList());
 
-        // 최근 조회 상품 목록 (조회수 높은 순으로 상위 5개 임의 추출)
-        List<ProductDto> recentViewedList = productService.getProductList(null, null, "salesCount", 0)
-                .getContent().stream().limit(5).collect(java.util.stream.Collectors.toList());
+        // 최근 조회 상품 목록 (세션에 저장된 상품 ID 순서대로 가져오기, 없으면 인기 조회 상품 대체)
+        @SuppressWarnings("unchecked")
+        List<Long> recentViewedSeqs = (List<Long>) session.getAttribute("recentViewedSeqs");
+        List<ProductDto> recentViewedList = new java.util.ArrayList<>();
+        if (recentViewedSeqs != null && !recentViewedSeqs.isEmpty()) {
+            for (Long rSeq : recentViewedSeqs) {
+                try {
+                    ProductDto p = productService.getProductWithoutViewCount(rSeq);
+                    // 삭제되었거나 접근 제한된 상품 필터링
+                    if (!"DELETED".equals(p.getStatus()) && !"Y".equals(p.getHideYn()) && !"STOPPED".equals(p.getSaleStatus())) {
+                        recentViewedList.add(p);
+                    }
+                } catch (Exception e) {
+                    // 없는 상품은 건너뜀
+                }
+            }
+        }
+        if (recentViewedList.isEmpty()) {
+            // 최근 본 상품이 없을 시 인기 상품(조회수 기준)으로 임시 노출
+            recentViewedList = productService.getProductList(null, null, "salesCount", 0)
+                    .getContent().stream().limit(5).collect(java.util.stream.Collectors.toList());
+        }
+
+        // 10개 단위 페이징 블록 계산 (고정 블록 방식)
+        int totalPages = productPage.getTotalPages();
+        int currentPage = productPage.getNumber();
+        int pageBlockSize = 10;
+        int startPage = 0;
+        int endPage = 0;
+        if (totalPages > 0) {
+            startPage = (currentPage / pageBlockSize) * pageBlockSize;
+            endPage = Math.min(totalPages - 1, startPage + pageBlockSize - 1);
+        }
 
         model.addAttribute("keyword", keyword);
         model.addAttribute("categorySeq", categorySeq);
         model.addAttribute("sort", sort);
+        model.addAttribute("price", price); // 파라미터 보존
+        model.addAttribute("rating", rating); // 파라미터 보존
+        model.addAttribute("hideOutOfStock", hideStockVal); // 품절 숨김 보존
         model.addAttribute("productList", productList); // HTML 템플릿의 ${productList}에 대응!
         model.addAttribute("recommendedList", recommendedList);
         model.addAttribute("recentViewedList", recentViewedList);
-        
-        // 페이징 처리를 위해 Page 객체 자체도 모델에 추가해 줍니다.
         model.addAttribute("productPage", productPage);
+        
+        model.addAttribute("startPage", startPage);
+        model.addAttribute("endPage", endPage);
         
         return "product/list";
     }
 
     // 상품 상세 (SHOP-PRD-02)
     @GetMapping("/products/{seq}")
-    public String productDetail(@PathVariable long seq, Model model) {
+    public String productDetail(@PathVariable long seq, jakarta.servlet.http.HttpSession session, Model model) {
         ProductDto product = productService.getProductDetail(seq);
         model.addAttribute("product", product);
+
+        // 최근 본 상품 세션 등록
+        @SuppressWarnings("unchecked")
+        List<Long> recentViewedSeqs = (List<Long>) session.getAttribute("recentViewedSeqs");
+        if (recentViewedSeqs == null) {
+            recentViewedSeqs = new java.util.ArrayList<>();
+        }
+        recentViewedSeqs.remove(seq); // 이미 존재하면 중복 방지를 위해 삭제
+        recentViewedSeqs.add(0, seq); // 최신 본 상품을 리스트 최상단에 배치
+        if (recentViewedSeqs.size() > 5) {
+            recentViewedSeqs.remove(recentViewedSeqs.size() - 1); // 최대 5개 노출
+        }
+        session.setAttribute("recentViewedSeqs", recentViewedSeqs);
+
         return "product/detail";
     }
 
