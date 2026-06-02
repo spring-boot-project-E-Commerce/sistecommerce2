@@ -1,7 +1,13 @@
 package com.example.java.admin.controller;
 
+
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+
+import org.springframework.ui.Model;
 
 @Controller
 public class UiTestController {
@@ -10,10 +16,16 @@ public class UiTestController {
 	public String Test404() {
 		return "admin/404.html";
 	}
+	
 	@GetMapping("/indexTest")
-	public String TestIndex() {
-		return "admin/index";
+	public String testIndex(Model model) {
+	    // 컨트롤러에서 직접 데이터 생성 후 바로 addAttribute
+	    List<Integer> list = Arrays.asList(10, 10, 10, 300);
+	    model.addAttribute("salesData", list); 
+	    
+	    return "admin/index";
 	}
+	
 	@GetMapping("/indexTest2")
 	public String TestIndex2() {
 		return "admin/alerts";
