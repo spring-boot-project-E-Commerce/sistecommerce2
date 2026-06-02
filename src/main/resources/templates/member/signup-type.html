@@ -36,7 +36,7 @@
 
             <div class="grid grid-cols-2 gap-4">
                 <!-- 일반회원 -->
-                <a th:href="@{/member/signup/terms(type='user')}"
+                <a th:href="@{/member/signup/terms}"
                     class="border-2 border-gray-200 hover:border-amber-500 p-8 flex flex-col items-center gap-4 cursor-pointer transition-colors group">
                     <i data-lucide="user"
                         class="w-12 h-12 stroke-[1.5] text-gray-400 group-hover:text-amber-500 transition-colors"></i>
@@ -47,7 +47,7 @@
                 </a>
 
                 <!-- 판매자 -->
-                <a th:href="@{/member/signup/terms(type='seller')}"
+                <a th:href="@{/member/signup/seller}"
                     class="border-2 border-gray-200 hover:border-amber-500 p-8 flex flex-col items-center gap-4 cursor-pointer transition-colors group">
                     <i data-lucide="store"
                         class="w-12 h-12 stroke-[1.5] text-gray-400 group-hover:text-amber-500 transition-colors"></i>
