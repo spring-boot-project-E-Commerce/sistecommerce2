@@ -52,6 +52,13 @@ public class ProductService {
         return convertToDtoWithDetails(updated);
     }
 
+    // 조회수 증가 없이 상품 조회 (최근 조회 상품 등 서브 영역 표시용)
+    public ProductDto getProductWithoutViewCount(Long seq) {
+        Product product = productRepository.findById(seq)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품입니다. 번호: " + seq));
+        return convertToDtoWithDetails(product);
+    }
+
     // 3. 상품 수정
     @Transactional
     public ProductDto updateProduct(Long seq, ProductDto dto) {
@@ -87,31 +94,29 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    // 5. 상품 목록 조회 및 검색 (페이징, 필터링, 정렬 지원)
+    // 5. 상품 목록 조회 및 검색 (기본 매개변수 위임)
     public Page<ProductDto> getProductList(Long categorySeq, String keyword, String sortBy, int page) {
+        return getProductList(categorySeq, keyword, sortBy, page, null, null, null, false);
+    }
+
+    // 5-1. 필터링 조건(최소/최대 가격, 평점)이 추가된 상품 목록 조회 및 검색
+    public Page<ProductDto> getProductList(Long categorySeq, String keyword, String sortBy, int page, Integer minPrice, Integer maxPrice, Double minRating) {
+        return getProductList(categorySeq, keyword, sortBy, page, minPrice, maxPrice, minRating, false);
+    }
+
+    // 5-2. 품절 상품 숨기기 필터가 추가된 최종 상품 목록 조회 및 검색
+    public Page<ProductDto> getProductList(Long categorySeq, String keyword, String sortBy, int page, Integer minPrice, Integer maxPrice, Double minRating, boolean hideOutOfStock) {
         // 기본 20개 페이징
         Pageable pageable = PageRequest.of(page, 20, getSortOption(sortBy));
-        Page<Product> productPage;
+        
+        Integer finalMinPrice = minPrice != null ? minPrice : 0;
+        Integer finalMaxPrice = maxPrice != null ? maxPrice : 999999999;
+        Double finalMinRating = minRating != null ? minRating : 0.0;
+        String finalKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword : null;
+        String saleStatus = hideOutOfStock ? "ON_SALE" : null;
 
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            if (categorySeq != null) {
-                // 카테고리 필터링 + 상품명 검색
-                productPage = productRepository.searchByCategoryAndName(categorySeq, keyword, pageable);
-            } else {
-                // 상품명만 검색
-                productPage = productRepository.searchByName(keyword, pageable);
-            }
-        } else {
-            if (categorySeq != null) {
-                // 카테고리 필터링만 적용
-                productPage = productRepository.findByCategorySeqAndHideYnAndSaleStatusNotAndStatus(
-                        categorySeq, "N", "STOPPED", "NORMAL", pageable);
-            } else {
-                // 기본 전체 목록 조회
-                productPage = productRepository.findByHideYnAndSaleStatusNotAndStatus(
-                        "N", "STOPPED", "NORMAL", pageable);
-            }
-        }
+        Page<Product> productPage = productRepository.findWithFilters(
+                categorySeq, finalKeyword, finalMinPrice, finalMaxPrice, finalMinRating, saleStatus, pageable);
 
         return productPage.map(this::convertToDtoWithDetails);
     }
