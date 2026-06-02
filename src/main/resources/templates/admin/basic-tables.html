@@ -10,7 +10,7 @@
     <title>
       Basic Tables | TailAdmin - Tailwind CSS Admin Dashboard Template
     </title>
-  <link rel="icon" href="favicon.ico"><link href="style.css" rel="stylesheet"></head>
+  <link rel="icon" href="favicon.ico"><link href="/admin/style.css" rel="stylesheet"></head>
   <body
     x-data="{ page: 'basicTables', 'loaded': true, 'darkMode': false, 'stickyMenu': false, 'sidebarToggle': false, 'scrollTop': false }"
     x-init="
@@ -45,10 +45,10 @@
   >
     <a href="index.html">
       <span class="logo" :class="sidebarToggle ? 'hidden' : ''">
-        <img class="dark:hidden" src="src/images/logo/logo.svg" alt="Logo" />
+        <img class="dark:hidden" src="/admin/src/images/logo/logo.svg" alt="Logo" />
         <img
           class="hidden dark:block"
-          src="src/images/logo/logo-dark.svg"
+          src="/admin/src/images/logo/logo-dark.svg"
           alt="Logo"
         />
       </span>
@@ -56,7 +56,7 @@
       <img
         class="logo-icon"
         :class="sidebarToggle ? 'lg:block' : 'hidden'"
-        src="src/images/logo/logo-icon.svg"
+        src="/admin/src/images/logo/logo-icon.svg"
         alt="Logo"
       />
     </a>
@@ -899,10 +899,10 @@
       <!-- Hamburger Toggle BTN -->
 
       <a href="index.html" class="lg:hidden">
-        <img class="dark:hidden" src="src/images/logo/logo.svg" alt="Logo" />
+        <img class="dark:hidden" src="/admin/src/images/logo/logo.svg" alt="Logo" />
         <img
           class="hidden dark:block"
-          src="src/images/logo/logo-dark.svg"
+          src="/admin/src/images/logo/logo-dark.svg"
           alt="Logo"
         />
       </a>
@@ -1092,7 +1092,7 @@
                     class="relative z-1 block h-10 w-full max-w-10 rounded-full"
                   >
                     <img
-                      src="src/images/user/user-02.jpg"
+                      src="/admin/src/images/user/user-02.jpg"
                       alt="User"
                       class="overflow-hidden rounded-full"
                     />
@@ -1134,7 +1134,7 @@
                     class="relative z-1 block h-10 w-full max-w-10 rounded-full"
                   >
                     <img
-                      src="src/images/user/user-03.jpg"
+                      src="/admin/src/images/user/user-03.jpg"
                       alt="User"
                       class="overflow-hidden rounded-full"
                     />
@@ -1176,7 +1176,7 @@
                     class="relative z-1 block h-10 w-full max-w-10 rounded-full"
                   >
                     <img
-                      src="src/images/user/user-04.jpg"
+                      src="/admin/src/images/user/user-04.jpg"
                       alt="User"
                       class="overflow-hidden rounded-full"
                     />
@@ -1218,7 +1218,7 @@
                     class="relative z-1 block h-10 w-full max-w-10 rounded-full"
                   >
                     <img
-                      src="src/images/user/user-05.jpg"
+                      src="/admin/src/images/user/user-05.jpg"
                       alt="User"
                       class="overflow-hidden rounded-full"
                     />
@@ -1260,7 +1260,7 @@
                     class="relative z-1 block h-10 w-full max-w-10 rounded-full"
                   >
                     <img
-                      src="src/images/user/user-02.jpg"
+                      src="/admin/src/images/user/user-02.jpg"
                       alt="User"
                       class="overflow-hidden rounded-full"
                     />
@@ -1302,7 +1302,7 @@
                     class="relative z-1 block h-10 w-full max-w-10 rounded-full"
                   >
                     <img
-                      src="src/images/user/user-03.jpg"
+                      src="/admin/src/images/user/user-03.jpg"
                       alt="User"
                       class="overflow-hidden rounded-full"
                     />
@@ -1344,7 +1344,7 @@
                     class="relative z-1 block h-10 w-full max-w-10 rounded-full"
                   >
                     <img
-                      src="src/images/user/user-04.jpg"
+                      src="/admin/src/images/user/user-04.jpg"
                       alt="User"
                       class="overflow-hidden rounded-full"
                     />
@@ -1386,7 +1386,7 @@
                     class="relative z-1 block h-10 w-full max-w-10 rounded-full"
                   >
                     <img
-                      src="src/images/user/user-05.jpg"
+                      src="/admin/src/images/user/user-05.jpg"
                       alt="User"
                       class="overflow-hidden rounded-full"
                     />
@@ -1444,7 +1444,7 @@
           @click.prevent="dropdownOpen = ! dropdownOpen"
         >
           <span class="mr-3 h-11 w-11 overflow-hidden rounded-full">
-            <img src="src/images/user/owner.jpg" alt="User" />
+            <img src="/admin/src/images/user/owner.jpg" alt="User" />
           </span>
 
           <span class="text-theme-sm mr-1 block font-medium"> Musharof </span>
@@ -1714,7 +1714,7 @@
             <div class="flex items-center">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 overflow-hidden rounded-full">
-                  <img src="src/images/user/user-17.jpg" alt="brand" />
+                  <img src="/admin/src/images/user/user-17.jpg" alt="brand" />
                 </div>
 
                 <div>
@@ -1745,17 +1745,17 @@
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-22.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-22.jpg" alt="user" />
                 </div>
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-23.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-23.jpg" alt="user" />
                 </div>
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-24.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-24.jpg" alt="user" />
                 </div>
               </div>
             </div>
@@ -1780,7 +1780,7 @@
             <div class="flex items-center">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 overflow-hidden rounded-full">
-                  <img src="src/images/user/user-18.jpg" alt="brand" />
+                  <img src="/admin/src/images/user/user-18.jpg" alt="brand" />
                 </div>
 
                 <div>
@@ -1811,12 +1811,12 @@
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-25.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-25.jpg" alt="user" />
                 </div>
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-26.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-26.jpg" alt="user" />
                 </div>
               </div>
             </div>
@@ -1843,7 +1843,7 @@
             <div class="flex items-center">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 overflow-hidden rounded-full">
-                  <img src="src/images/user/user-19.jpg" alt="brand" />
+                  <img src="/admin/src/images/user/user-19.jpg" alt="brand" />
                 </div>
 
                 <div>
@@ -1874,7 +1874,7 @@
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-27.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-27.jpg" alt="user" />
                 </div>
               </div>
             </div>
@@ -1901,7 +1901,7 @@
             <div class="flex items-center">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 overflow-hidden rounded-full">
-                  <img src="src/images/user/user-20.jpg" alt="brand" />
+                  <img src="/admin/src/images/user/user-20.jpg" alt="brand" />
                 </div>
 
                 <div>
@@ -1932,17 +1932,17 @@
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-28.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-28.jpg" alt="user" />
                 </div>
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-29.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-29.jpg" alt="user" />
                 </div>
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-30.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-30.jpg" alt="user" />
                 </div>
               </div>
             </div>
@@ -1967,7 +1967,7 @@
             <div class="flex items-center">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 overflow-hidden rounded-full">
-                  <img src="src/images/user/user-21.jpg" alt="brand" />
+                  <img src="/admin/src/images/user/user-21.jpg" alt="brand" />
                 </div>
 
                 <div>
@@ -1998,17 +1998,17 @@
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-31.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-31.jpg" alt="user" />
                 </div>
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-32.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-32.jpg" alt="user" />
                 </div>
                 <div
                   class="w-6 h-6 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
                 >
-                  <img src="src/images/user/user-33.jpg" alt="user" />
+                  <img src="/admin/src/images/user/user-33.jpg" alt="user" />
                 </div>
               </div>
             </div>
@@ -2043,5 +2043,5 @@
       <!-- ===== Content Area End ===== -->
     </div>
     <!-- ===== Page Wrapper End ===== -->
-  <script defer src="bundle.js"></script></body>
+  <script defer src="admin/bundle.js"></script></body>
 </html>
