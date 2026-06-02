@@ -68,9 +68,9 @@ public class Delivery {
 	@JoinColumn(name = "seq")
 	private DeliveryCompany deliveryCompany;
 	
-	@OneToOne
-	@JoinColumn(name = "seq")
-	private Orders orders;
+//	@OneToOne
+//	@JoinColumn(name = "seq")
+//	private Orders orders;
 	
 //	@OneToOne
 //	@JoinColumn(name = "seq")
