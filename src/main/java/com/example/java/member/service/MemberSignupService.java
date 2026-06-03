@@ -4,9 +4,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.java.member.dto.MemberDto;
+import com.example.java.member.entity.Coupon;
 import com.example.java.member.entity.Member;
+import com.example.java.member.entity.MemberCoupon;
 import com.example.java.member.entity.Memberships;
 import com.example.java.member.entity.NotificationPreference;
+import com.example.java.member.repository.CouponRepository;
+import com.example.java.member.repository.MemberCouponRepository;
 import com.example.java.member.repository.MemberRepository;
 import com.example.java.member.repository.MembershipsRepository;
 import com.example.java.member.repository.NotificationPreferenceRepository;
@@ -20,6 +24,8 @@ public class MemberSignupService {
     private final MemberRepository memberRepository;
     private final NotificationPreferenceRepository notificationPreferenceRepository;
     private final MembershipsRepository membershipsRepository;
+    private final MemberCouponRepository memberCouponRepository;
+    private final CouponRepository couponRepository;
 
     @Transactional
     public boolean signup(MemberDto memberDto) {
@@ -55,6 +61,17 @@ public class MemberSignupService {
         		.build();
         
         membershipsRepository.save(memberships);
+        
+        // 4. 신규 쿠폰 발급 
+        Coupon coupon = couponRepository.getReferenceById(1L);
+        
+        MemberCoupon memberCoupon = MemberCoupon.builder()
+        		.memberSeq(savedMember)
+        		.couponSeq(coupon)
+        		.status(0)
+        		.build();
+        
+        memberCouponRepository.save(memberCoupon);
         
 
         return true;
