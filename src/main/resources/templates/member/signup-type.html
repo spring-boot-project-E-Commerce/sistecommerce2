@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/layout :: head('Gold Market | 회원가입')}"></head>
+
+<body class="bg-[#f5f6f9] text-gray-900 font-sans antialiased min-h-screen">
+
+    <div th:replace="~{fragments/header :: header}"></div>
+
+    <main class="max-w-screen-wide mx-auto px-4 py-16 flex justify-center">
+        <div class="w-full max-w-lg bg-white border border-gray-200 p-10">
+
+            <h2 class="text-2xl font-black text-slate-900 mb-1">회원가입</h2>
+            <p class="text-xs text-gray-400 mb-10">가입할 회원 유형을 선택해주세요.</p>
+
+            <!-- 단계 표시 -->
+            <div class="flex items-center mb-10">
+                <div class="flex items-center gap-2">
+                    <span
+                        class="w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">1</span>
+                    <span class="text-xs font-bold text-amber-600">유형 선택</span>
+                </div>
+                <div class="flex-1 h-px bg-gray-200 mx-3"></div>
+                <div class="flex items-center gap-2">
+                    <span
+                        class="w-6 h-6 rounded-full bg-gray-200 text-gray-400 text-xs font-bold flex items-center justify-center">2</span>
+                    <span class="text-xs text-gray-400">약관 동의</span>
+                </div>
+                <div class="flex-1 h-px bg-gray-200 mx-3"></div>
+                <div class="flex items-center gap-2">
+                    <span
+                        class="w-6 h-6 rounded-full bg-gray-200 text-gray-400 text-xs font-bold flex items-center justify-center">3</span>
+                    <span class="text-xs text-gray-400">정보 입력</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <!-- 일반회원 -->
+                <a th:href="@{/member/signup/terms}"
+                    class="border-2 border-gray-200 hover:border-amber-500 p-8 flex flex-col items-center gap-4 cursor-pointer transition-colors group">
+                    <i data-lucide="user"
+                        class="w-12 h-12 stroke-[1.5] text-gray-400 group-hover:text-amber-500 transition-colors"></i>
+                    <div class="text-center">
+                        <p class="font-black text-sm text-slate-900">일반 회원</p>
+                        <p class="text-xs text-gray-400 mt-1">상품을 구매하는 고객</p>
+                    </div>
+                </a>
+
+                <!-- 판매자 -->
+                <a th:href="@{/member/signup/seller}"
+                    class="border-2 border-gray-200 hover:border-amber-500 p-8 flex flex-col items-center gap-4 cursor-pointer transition-colors group">
+                    <i data-lucide="store"
+                        class="w-12 h-12 stroke-[1.5] text-gray-400 group-hover:text-amber-500 transition-colors"></i>
+                    <div class="text-center">
+                        <p class="font-black text-sm text-slate-900">판매 회원</p>
+                        <p class="text-xs text-gray-400 mt-1">상품을 판매하는 판매처</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="mt-8 text-center text-xs text-gray-400">
+                이미 계정이 있으신가요?
+                <a th:href="@{/member/login}" class="text-amber-600 font-bold hover:underline ml-1">로그인</a>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+
+</html>

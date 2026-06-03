@@ -1,14 +1,21 @@
 package com.example.java.member.controller;
 
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 import com.example.java.member.dto.MemberDto;
 import com.example.java.member.service.MemberLoginService;
+import com.example.java.member.service.MemberSignupService;
 import com.example.java.storefront.SampleProducts;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+
 
 @Controller
 @RequestMapping("/member")
@@ -16,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class MemberController {
 
     private final MemberLoginService memberLoginService;
+    private final MemberSignupService memberSignupService;
 
     @GetMapping("/login")
     public String loginPage() {
@@ -50,4 +58,44 @@ public class MemberController {
         model.addAttribute("orders", SampleProducts.orders());
         return "mypage/orders";
     }
+    
+    @GetMapping("/signup/type")
+    public String signupType() {
+    	return "member/signup-type";
+    }
+    
+    @GetMapping("/signup/terms")
+    public String signupTerms() {
+        return "member/signup-terms";
+    }
+
+    @PostMapping("/signup/terms")
+    public String signupTermsOk(
+            @RequestParam(name = "marketing", defaultValue = "false") boolean marketing,
+            HttpSession session) {
+        session.setAttribute("marketing", marketing);
+        return "redirect:/member/signup";
+    }
+    
+    @GetMapping("/signup")
+    public String signup() {
+        return "member/signup";
+    }
+    
+    @PostMapping("/signup")
+    public String signupOk(@ModelAttribute MemberDto memberDto, HttpSession session, Model model) {
+        memberDto.setMarketing((Boolean) session.getAttribute("marketing"));
+
+        boolean success = memberSignupService.signup(memberDto);
+
+        if (!success) {
+            model.addAttribute("error", "회원가입에 실패했습니다.");
+            return "member/signup";  // 다시 폼으로
+        }
+
+        return "redirect:/member/login";  // 성공 시 로그인 페이지로
+    }
+    
+    
+    
 }
