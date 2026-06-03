@@ -26,54 +26,54 @@ public class MemberSignupService {
     private final MembershipsRepository membershipsRepository;
     private final MemberCouponRepository memberCouponRepository;
     private final CouponRepository couponRepository;
-
+    
     @Transactional
     public boolean signup(MemberDto memberDto) {
-
-        // 1. 기본값 세팅 후 Member 저장
-        MemberDto dto = memberDto.toBuilder()
-                .status(1)
-                .role("ROLE_USER")
-                .loginType("LOCAL")
-                .build();
-
-        Member member = dto.toEntity();
-        Member savedMember = memberRepository.save(member);
-
-        // 2. 마케팅 동의 여부에 따라 notification_preferences 저장
-        String marketingYn = Boolean.TRUE.equals(memberDto.getMarketing()) ? "Y" : "N";
-
-        NotificationPreference pref = NotificationPreference.builder()
-                .memberSeq(savedMember)
-                .emailYn(marketingYn)
-                .smsYn(marketingYn)
-                .pushYn(marketingYn)
-                .marketingEmailYn(marketingYn)
-                .marketingSmsYn(marketingYn)
-                .build();
-
-        notificationPreferenceRepository.save(pref);
-        
-        // 3. 멤버십 테이블 생성 (미가입 상태)
-        Memberships memberships = Memberships.builder()
-        		.memberSeq(savedMember)
-        		.status("none")
-        		.build();
-        
-        membershipsRepository.save(memberships);
-        
-        // 4. 신규 쿠폰 발급 
-        Coupon coupon = couponRepository.getReferenceById(1L);
-        
-        MemberCoupon memberCoupon = MemberCoupon.builder()
-        		.memberSeq(savedMember)
-        		.couponSeq(coupon)
-        		.status(0)
-        		.build();
-        
-        memberCouponRepository.save(memberCoupon);
-        
-
+        Member savedMember = saveMember(memberDto);
+        saveNotificationPreference(savedMember, memberDto.getMarketing());
+        saveMemberships(savedMember);
+        saveMemberCoupon(savedMember);
         return true;
     }
+    
+    // 1. 기본값 세팅 후 Member 저장
+    public Member saveMember(MemberDto memberDto) {
+    	Member member = memberDto.toBuilder()
+    			.status(1)
+                .role("ROLE_USER")
+                .loginType("LOCAL")
+                .build()
+                .toEntity();
+    	return memberRepository.save(member);
+    }
+    
+    // 2. 마케팅 동의 여부에 따라 notification_preferences 저장
+    private void saveNotificationPreference(Member savedMember, Boolean marketing) {
+        String yn = Boolean.TRUE.equals(marketing) ? "Y" : "N";
+        notificationPreferenceRepository.save(NotificationPreference.builder()
+                .memberSeq(savedMember)
+                .emailYn(yn).smsYn(yn).pushYn(yn)
+                .marketingEmailYn(yn).marketingSmsYn(yn)
+                .build());
+    }
+    
+    // 3. 멤버십 테이블 생성 (미가입 상태)
+    private void saveMemberships(Member savedMember) {
+        membershipsRepository.save(Memberships.builder()
+                .memberSeq(savedMember)
+                .status("NONE")
+                .build());
+    }
+
+    // 4. 신규 쿠폰 발급
+    private void saveMemberCoupon(Member savedMember) {
+        Coupon coupon = couponRepository.getReferenceById(1L);
+        memberCouponRepository.save(MemberCoupon.builder()
+                .memberSeq(savedMember)
+                .couponSeq(coupon)
+                .status(0)
+                .build());
+    }
+
+    
 }
