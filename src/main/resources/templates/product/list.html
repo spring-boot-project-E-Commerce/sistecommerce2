@@ -1,63 +1,436 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('쇼핑몰 | 상품 목록')}"></head>
+<head th:replace="~{fragments/layout :: head('Gold Market | 상품목록')}"></head>
 <body class="bg-[#f5f6f9] text-gray-900 font-sans antialiased min-h-screen">
 
 <div th:replace="~{fragments/header :: header}"></div>
 
-<!-- 쇼핑몰 목록 화면 (SHOP-PRD-01) -->
-<main class="max-w-screen-wide mx-auto px-4 mt-8 pb-32">
+<main class="max-w-screen-wide mx-auto px-4 mt-8 pb-32 flex flex-col lg:flex-row gap-6 items-start">
 
-    <!-- 검색/정렬 바 -->
-    <section class="bg-white border border-gray-200 p-4 mb-6">
-        <form th:action="@{/products}" method="get" class="flex border-2 border-amber-500 mb-3">
-            <input type="text" name="keyword" th:value="${keyword}" placeholder="상품명으로 검색"
-                   class="w-full px-4 py-2 text-sm focus:outline-none" />
-            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-6 text-sm font-bold">검색</button>
-        </form>
-        <div class="flex flex-wrap gap-2 text-xs font-semibold">
-            <a th:href="@{/products(sort='new')}" class="px-3 py-1 bg-slate-900 text-white">✓ 신상품순</a>
-            <a th:href="@{/products(sort='priceAsc')}" class="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200">낮은가격순</a>
-            <a th:href="@{/products(sort='priceDesc')}" class="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200">높은가격순</a>
-            <a th:href="@{/products(sort='salesDesc')}" class="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200">판매량순</a>
-            <a th:href="@{/products(sort='rating')}" class="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200">별점순</a>
+    <aside class="w-full lg:w-64 flex-shrink-0 bg-white p-5 border border-gray-200">
+        <div class="mb-8">
+            <h2 class="text-base font-black text-slate-900 border-b-2 border-slate-900 pb-2 mb-4 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-amber-500"></span> SORT BY
+            </h2>
+            <ul class="space-y-2 text-sm font-bold text-gray-700">
+                <li>
+                    <a th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort='salesDesc', price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}" 
+                       class="block px-3 py-2 border transition-colors"
+                       th:classappend="${sort == null or sort == 'salesDesc' or sort == ''} ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-gray-200 hover:border-amber-500 hover:text-amber-500'">
+                        <span th:if="${sort == null or sort == 'salesDesc' or sort == ''}">✓ </span>판매량순
+                    </a>
+                </li>
+                <li>
+                    <a th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort='priceAsc', price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}" 
+                       class="block px-3 py-2 border transition-colors"
+                       th:classappend="${sort == 'priceAsc'} ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-gray-200 hover:border-amber-500 hover:text-amber-500'">
+                        <span th:if="${sort == 'priceAsc'}">✓ </span>낮은 가격순
+                    </a>
+                </li>
+                <li>
+                    <a th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort='priceDesc', price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}" 
+                       class="block px-3 py-2 border transition-colors"
+                       th:classappend="${sort == 'priceDesc'} ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-gray-200 hover:border-amber-500 hover:text-amber-500'">
+                        <span th:if="${sort == 'priceDesc'}">✓ </span>높은 가격순
+                    </a>
+                </li>
+                <li>
+                    <a th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort='newest', price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}" 
+                       class="block px-3 py-2 border transition-colors"
+                       th:classappend="${sort == 'newest'} ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-gray-200 hover:border-amber-500 hover:text-amber-500'">
+                        <span th:if="${sort == 'newest'}">✓ </span>최신순
+                    </a>
+                </li>
+                <li>
+                    <a th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort='ratingDesc', price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}" 
+                       class="block px-3 py-2 border transition-colors"
+                       th:classappend="${sort == 'ratingDesc'} ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-gray-200 hover:border-amber-500 hover:text-amber-500'">
+                        <span th:if="${sort == 'ratingDesc'}">✓ </span>별점순
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div>
+            <h2 class="text-base font-black text-slate-900 border-b-2 border-slate-900 pb-2 mb-4 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-slate-900"></span> FILTER
+            </h2>
+            
+            <form action="/products" id="filter-form" method="get" class="space-y-6">
+                <!-- 기존 쿼리 파라미터 보존용 hidden 필드 -->
+                <input type="hidden" name="keyword" th:value="${keyword}">
+                <input type="hidden" name="categorySeq" th:value="${categorySeq}">
+                <input type="hidden" name="sort" th:value="${sort}">
+
+                <div class="dual-slider-container">
+                    <h3 class="text-xs font-black text-gray-800 mb-3 pb-1 border-b border-gray-100">가격 범위 (Price Range)</h3>
+                    <style>
+                        .dual-slider-container .slider-relative {
+                            position: relative;
+                            width: 100%;
+                            height: 20px;
+                            display: flex;
+                            align-items: center;
+                        }
+                        .dual-slider-container input[type="range"] {
+                            position: absolute;
+                            width: 100%;
+                            height: 20px;
+                            background: transparent;
+                            -webkit-appearance: none;
+                            appearance: none;
+                            pointer-events: none;
+                            margin: 0;
+                            z-index: 20;
+                        }
+                        .dual-slider-container input[type="range"]::-webkit-slider-thumb {
+                            -webkit-appearance: none;
+                            appearance: none;
+                            width: 14px;
+                            height: 14px;
+                            border-radius: 50%;
+                            background: #f59e0b; /* amber-500 */
+                            border: 2px solid #ffffff;
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                            cursor: pointer;
+                            pointer-events: auto;
+                            transition: transform 0.1s ease;
+                        }
+                        .dual-slider-container input[type="range"]::-webkit-slider-thumb:hover {
+                            transform: scale(1.3);
+                        }
+                        .dual-slider-container input[type="range"]::-moz-range-thumb {
+                            width: 14px;
+                            height: 14px;
+                            border-radius: 50%;
+                            background: #f59e0b; /* amber-500 */
+                            border: 2px solid #ffffff;
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                            cursor: pointer;
+                            pointer-events: auto;
+                            transition: transform 0.1s ease;
+                        }
+                        .dual-slider-container input[type="range"]::-moz-range-thumb:hover {
+                            transform: scale(1.3);
+                        }
+                    </style>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-xs font-black text-slate-900 bg-slate-50 p-2 border border-gray-100 rounded-sm">
+                            <span id="price-min-display">0원</span>
+                            <span class="text-gray-400 font-normal">~</span>
+                            <span id="price-max-display">150,000원+</span>
+                        </div>
+                        <div class="slider-relative">
+                            <!-- Background Track -->
+                            <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-gray-200 rounded-full z-0"></div>
+                            <!-- Active Range Highlight -->
+                            <div id="slider-range-fill" class="absolute top-1/2 -translate-y-1/2 h-1 bg-amber-500 rounded-full z-10" style="left: 0%; right: 0%;"></div>
+                            
+                            <!-- Min range slider input -->
+                            <input type="range" id="price-min-slider" min="0" max="150000" step="10000" value="0" class="focus:outline-none">
+                            <!-- Max range slider input -->
+                            <input type="range" id="price-max-slider" min="0" max="150000" step="10000" value="150000" class="focus:outline-none">
+                        </div>
+                        <input type="hidden" name="price" id="price-hidden-input" th:value="${price}">
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-black text-gray-800 mb-3 pb-1 border-b border-gray-100">별점 (Rating)</h3>
+                    <div class="space-y-2 text-sm text-gray-600 font-medium">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="rating" value="" th:checked="${rating == null or rating == ''}" onchange="this.form.submit()" class="text-amber-500 focus:ring-amber-500 border-gray-300">
+                            전체
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="rating" value="4" th:checked="${rating == '4'}" onchange="this.form.submit()" class="text-amber-500 focus:ring-amber-500 border-gray-300">
+                            ⭐⭐⭐⭐ 4점 이상
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="rating" value="3" th:checked="${rating == '3'}" onchange="this.form.submit()" class="text-amber-500 focus:ring-amber-500 border-gray-300">
+                            ⭐⭐⭐ 3점 이상
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-gray-100">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs font-black text-gray-800">
+                        <input type="checkbox" name="hideOutOfStock" value="true" th:checked="${hideOutOfStock}" onchange="this.form.submit()" class="text-amber-500 focus:ring-amber-500 border-gray-300 rounded">
+                        🚫 품절 상품 숨기기
+                    </label>
+                </div>
+
+                <button type="submit" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-2 transition-colors text-xs">
+                    조건 검색 적용
+                </button>
+            </form>
+
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    const hiddenInput = document.getElementById('price-hidden-input');
+                    const minSlider = document.getElementById('price-min-slider');
+                    const maxSlider = document.getElementById('price-max-slider');
+                    const minDisplay = document.getElementById('price-min-display');
+                    const maxDisplay = document.getElementById('price-max-display');
+                    const fill = document.getElementById('slider-range-fill');
+                    const form = document.getElementById('filter-form');
+                    
+                    const sliderMaxLimit = 150000;
+                    
+                    let currentMin = 0;
+                    let currentMax = sliderMaxLimit;
+                    
+                    if (hiddenInput && hiddenInput.value) {
+                        const parts = hiddenInput.value.split('-');
+                        if (parts.length === 2) {
+                            currentMin = parseInt(parts[0]) || 0;
+                            if (parts[1] === 'max') {
+                                currentMax = sliderMaxLimit;
+                            } else {
+                                currentMax = parseInt(parts[1]) || sliderMaxLimit;
+                            }
+                        }
+                    }
+                    
+                    minSlider.value = currentMin;
+                    maxSlider.value = currentMax;
+                    updateSliderUI();
+                    
+                    function updateSliderUI() {
+                        let minVal = parseInt(minSlider.value);
+                        let maxVal = parseInt(maxSlider.value);
+                        
+                        if (minVal > maxVal - 10000) {
+                            minVal = maxVal - 10000;
+                            minSlider.value = minVal;
+                        }
+                        if (maxVal < minVal + 10000) {
+                            maxVal = minVal + 10000;
+                            maxSlider.value = maxVal;
+                        }
+                        
+                        minDisplay.innerText = minVal.toLocaleString() + '원';
+                        maxDisplay.innerText = (maxVal >= sliderMaxLimit) ? '15만원+' : maxVal.toLocaleString() + '원';
+                        
+                        const minPercent = (minVal / sliderMaxLimit) * 100;
+                        const maxPercent = (maxVal / sliderMaxLimit) * 100;
+                        fill.style.left = minPercent + '%';
+                        fill.style.right = (100 - maxPercent) + '%';
+                        
+                        if (minVal === 0 && maxVal >= sliderMaxLimit) {
+                            hiddenInput.value = 'all';
+                        } else {
+                            hiddenInput.value = minVal + '-' + (maxVal >= sliderMaxLimit ? 'max' : maxVal);
+                        }
+                    }
+                    
+                    minSlider.addEventListener('input', function() {
+                        const minVal = parseInt(minSlider.value);
+                        const maxVal = parseInt(maxSlider.value);
+                        if (minVal > maxVal - 10000) {
+                            this.value = maxVal - 10000;
+                        }
+                        updateSliderUI();
+                    });
+                    
+                    maxSlider.addEventListener('input', function() {
+                        const minVal = parseInt(minSlider.value);
+                        const maxVal = parseInt(maxSlider.value);
+                        if (maxVal < minVal + 10000) {
+                            this.value = minVal + 10000;
+                        }
+                        updateSliderUI();
+                    });
+                    
+                    minSlider.addEventListener('change', function() {
+                        form.submit();
+                    });
+                    
+                    maxSlider.addEventListener('change', function() {
+                        form.submit();
+                    });
+                });
+            </script>
+        </div>
+    </aside>
+
+    <section class="flex-1 min-w-0">
+        
+        <!-- 카테고리 네비게이션 선택기 -->
+        <div class="bg-white border border-gray-200 p-6 mb-6 rounded-sm space-y-4">
+            <!-- 대분류 선택 -->
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-black text-slate-500 w-16 shrink-0">대분류</span>
+                <div class="flex flex-wrap gap-2">
+                    <a th:href="@{/products(keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}"
+                       class="px-4 py-1.5 text-xs font-bold border transition-all rounded-full"
+                       th:classappend="${categoryPath == null or categoryPath.isEmpty()} ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-amber-400 hover:text-amber-500'">
+                        전체
+                    </a>
+                    <a th:each="cat : ${globalCategories}"
+                       th:href="@{/products(categorySeq=${cat.seq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}"
+                       th:text="${cat.categoryName}"
+                       class="px-4 py-1.5 text-xs font-bold border transition-all rounded-full"
+                       th:classappend="${categoryPath != null and !categoryPath.isEmpty() and categoryPath[0].seq == cat.seq} ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-amber-400 hover:text-amber-500'">
+                        대분류명
+                    </a>
+                </div>
+            </div>
+
+            <!-- 중분류 선택 (대분류가 선택된 경우에만 노출) -->
+            <div th:if="${categoryPath != null and !categoryPath.isEmpty()}" class="flex items-center gap-3 pt-3 border-t border-gray-100">
+                <span class="text-xs font-black text-slate-500 w-16 shrink-0">중분류</span>
+                <div class="flex flex-wrap gap-2">
+                    <!-- 현재 선택된 대분류의 하위 중분류 목록 탐색 -->
+                    <th:block th:each="largeCat : ${globalCategories}" th:if="${largeCat.seq == categoryPath[0].seq}">
+                        <!-- 중분류 전체 (대분류 선택된 상태와 같음) -->
+                        <a th:href="@{/products(categorySeq=${largeCat.seq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}"
+                           class="px-4 py-1.5 text-xs font-bold border transition-all rounded-full"
+                           th:classappend="${categoryPath.size() == 1} ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-amber-400 hover:text-amber-500'">
+                            전체
+                        </a>
+                        <a th:each="cat1 : ${largeCat.children}"
+                           th:href="@{/products(categorySeq=${cat1.seq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}"
+                           th:text="${cat1.categoryName}"
+                           class="px-4 py-1.5 text-xs font-bold border transition-all rounded-full"
+                           th:classappend="${categoryPath.size() >= 2 and categoryPath[1].seq == cat1.seq} ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-amber-400 hover:text-amber-500'">
+                            중분류명
+                        </a>
+                    </th:block>
+                </div>
+            </div>
+
+            <!-- 소분류 선택 (중분류가 선택된 경우에만 노출) -->
+            <div th:if="${categoryPath != null and categoryPath.size() >= 2}" class="flex items-center gap-3 pt-3 border-t border-gray-100">
+                <span class="text-xs font-black text-slate-500 w-16 shrink-0">소분류</span>
+                <div class="flex flex-wrap gap-2">
+                    <!-- 현재 선택된 대분류 및 중분류의 하위 소분류 목록 탐색 -->
+                    <th:block th:each="largeCat : ${globalCategories}" th:if="${largeCat.seq == categoryPath[0].seq}">
+                        <th:block th:each="midCat : ${largeCat.children}" th:if="${midCat.seq == categoryPath[1].seq}">
+                            <!-- 소분류 전체 (중분류 선택된 상태와 같음) -->
+                            <a th:href="@{/products(categorySeq=${midCat.seq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}"
+                               class="px-4 py-1.5 text-xs font-bold border transition-all rounded-full"
+                               th:classappend="${categoryPath.size() == 2} ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-amber-400 hover:text-amber-500'">
+                                전체
+                            </a>
+                            <a th:each="cat2 : ${midCat.children}"
+                               th:href="@{/products(categorySeq=${cat2.seq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, hideOutOfStock=${hideOutOfStock})}"
+                               th:text="${cat2.categoryName}"
+                               class="px-4 py-1.5 text-xs font-bold border transition-all rounded-full"
+                               th:classappend="${categoryPath.size() >= 3 and categoryPath[2].seq == cat2.seq} ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-amber-400 hover:text-amber-500'">
+                                소분류명
+                            </a>
+                        </th:block>
+                    </th:block>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            
+            <a th:each="p : ${productList}" th:href="@{/products/{seq}(seq=${p.seq})}"
+               class="bg-white p-2 flex flex-col justify-between group cursor-pointer border border-transparent hover:border-amber-400 transition-colors relative"
+               th:classappend="${p.status == 'SOLD_OUT'} ? 'opacity-60' : ''">
+                
+                <div th:if="${p.status == 'SOLD_OUT'}" class="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-[1px]">
+                    <span class="bg-slate-900 text-white font-black px-4 py-1.5 text-sm tracking-widest border-2 border-white shadow-lg">품절</span>
+                </div>
+
+                <div class="aspect-square bg-gray-50 relative overflow-hidden">
+                    <img th:src="${p.image}" alt="상품 이미지" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+                </div>
+                <div class="pt-3 space-y-1.5">
+                    <h4 th:text="${p.name}" class="text-xs text-gray-700 line-clamp-2 leading-normal group-hover:text-amber-600 group-hover:underline">상품명이 여기에 표시됩니다. 두 줄까지 가능합니다.</h4>
+                    <div>
+                        <div th:if="${p.originalPrice > p.price}" th:text="${#numbers.formatInteger(p.originalPrice, 0, 'COMMA')} + '원'"
+                             class="text-[11px] text-gray-400 line-through">0원</div>
+                        <div class="flex items-baseline gap-1">
+                            <span th:if="${p.discountRate > 0}" th:text="${p.discountRate} + '%'" class="text-red-500 font-black text-sm">0%</span>
+                            <span th:text="${#numbers.formatInteger(p.price, 0, 'COMMA')}" class="text-slate-900 font-extrabold text-base">0</span>
+                            <span class="text-xs font-bold text-slate-900">원</span>
+                        </div>
+                        <div class="mt-1 flex items-center gap-1 text-[10px] text-gray-400">
+                            <span class="text-amber-500 font-bold" th:text="${p.averageRating}">⭐ 0.0</span>
+                            <span th:text="'(' + ${#numbers.formatInteger(p.reviewCount, 0, 'COMMA')} + ')'">(0)</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            
+            <div th:if="${#lists.isEmpty(productList)}" class="col-span-full py-20 text-center text-gray-500">
+                <p>검색 조건에 맞는 상품이 없습니다.</p>
+            </div>
+        </div>
+
+        <div th:if="${not #lists.isEmpty(productList)}" class="mt-12 flex justify-center items-center gap-1 text-sm font-bold">
+            <!-- 이전 블록 (10페이지 전으로) -->
+            <a th:if="${startPage > 0}" 
+               th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, page=${startPage - 1}, hideOutOfStock=${hideOutOfStock})}" 
+               class="w-8 h-8 flex items-center justify-center border border-gray-200 text-gray-600 hover:border-amber-500 hover:text-amber-500 bg-white" title="이전 10페이지">&laquo;</a>
+            
+            <!-- 이전 페이지 -->
+            <a th:if="${productPage.hasPrevious()}" 
+               th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, page=${productPage.number - 1}, hideOutOfStock=${hideOutOfStock})}" 
+               class="px-3 py-1 text-gray-600 hover:text-amber-600 mr-1">&larr; Prev</a>
+            <span th:unless="${productPage.hasPrevious()}" 
+                   class="px-3 py-1 text-gray-400 mr-1">&larr; Prev</span>
+                  
+            <!-- 페이지 번호 목록 (최대 10개) -->
+            <th:block th:if="${productPage.totalPages > 0}">
+                <a th:each="i : ${#numbers.sequence(startPage, endPage)}"
+                   th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, page=${i}, hideOutOfStock=${hideOutOfStock})}"
+                   class="w-8 h-8 flex items-center justify-center border font-bold"
+                   th:classappend="${i == productPage.number} ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-gray-200 text-gray-600 hover:border-amber-500 hover:text-amber-500'"
+                   th:text="${i + 1}">1</a>
+            </th:block>
+            
+            <!-- 다음 페이지 -->
+            <a th:if="${productPage.hasNext()}" 
+               th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, page=${productPage.number + 1}, hideOutOfStock=${hideOutOfStock})}" 
+               class="px-3 py-1 text-gray-600 hover:text-amber-600 ml-1">Next &rarr;</a>
+            <span th:unless="${productPage.hasNext()}" 
+                   class="px-3 py-1 text-gray-400 ml-1">Next &rarr;</span>
+
+            <!-- 다음 블록 (10페이지 후로) -->
+            <a th:if="${endPage < productPage.totalPages - 1}" 
+               th:href="@{/products(categorySeq=${categorySeq}, keyword=${keyword}, sort=${sort}, price=${price}, rating=${rating}, page=${endPage + 1}, hideOutOfStock=${hideOutOfStock})}" 
+               class="w-8 h-8 flex items-center justify-center border border-gray-200 text-gray-600 hover:border-amber-500 hover:text-amber-500 bg-white" title="다음 10페이지">&raquo;</a>
         </div>
     </section>
 
-    <!-- 상품 그리드 -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
-        <a th:each="p : ${products}" th:href="@{/products/{seq}(seq=${p.seq})}"
-           class="bg-white p-2 flex flex-col justify-between group cursor-pointer border border-transparent hover:border-amber-400 transition-colors">
-            <div class="aspect-square bg-gray-50 relative overflow-hidden">
-                <img th:src="${p.image}" alt="" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
-            </div>
-            <div class="pt-3 space-y-1">
-                <h4 th:text="${p.name}" class="text-xs text-gray-700 line-clamp-2 leading-normal group-hover:text-amber-600 group-hover:underline">상품명</h4>
-                <div th:if="${p.originalPrice > 0}" th:text="${#numbers.formatInteger(p.originalPrice, 0, 'COMMA')} + '원'"
-                     class="text-[11px] text-gray-400 line-through">원가</div>
-                <div class="flex items-baseline gap-1">
-                    <span th:if="${p.discountRate > 0}" th:text="${p.discountRate} + '%'" class="text-red-500 font-black text-sm">0%</span>
-                    <span th:text="${#numbers.formatInteger(p.price, 0, 'COMMA')}" class="text-gray-900 font-extrabold text-base">0</span>
-                    <span class="text-xs font-bold">원</span>
-                </div>
-                <div class="text-[10px] text-gray-400">
-                    <span class="text-amber-500 font-bold" th:text="${p.rating}">★★★★★</span>
-                    <span th:text="'(' + ${#numbers.formatInteger(p.reviewCount, 0, 'COMMA')} + ')'">(0)</span>
-                </div>
-            </div>
-        </a>
-    </div>
+    <aside class="hidden xl:flex w-52 flex-col gap-6 flex-shrink-0">
+        <div class="bg-white p-4 border border-gray-200 shadow-sm">
+            <h3 class="text-xs font-black text-slate-900 mb-3 pb-2 border-b border-gray-100">🔥 추천 상품 목록</h3>
+            <ul class="space-y-3">
+                <li th:each="r : ${recommendedList}">
+                    <a th:href="@{/products/{seq}(seq=${r.seq})}" class="group block">
+                        <h4 th:text="${r.name}" class="text-[11px] text-gray-700 truncate group-hover:text-amber-600 group-hover:underline">추천상품명</h4>
+                        <div class="flex justify-between items-baseline mt-0.5">
+                            <span th:text="${#numbers.formatInteger(r.price, 0, 'COMMA')} + '원'" class="text-xs font-bold text-slate-900">0원</span>
+                            <span class="text-[10px] text-red-500 font-bold flex items-center">⇧ 1</span>
+                        </div>
+                    </a>
+                </li>
+            </ul>
+        </div>
 
-    <!-- 페이징 (10개 단위) -->
-    <nav class="flex items-center justify-center gap-1 mt-10 text-sm">
-        <a href="#" class="px-3 py-1.5 border border-gray-200 bg-white text-gray-400 hover:bg-gray-50">← 이전</a>
-        <a href="#" class="px-3 py-1.5 border border-amber-500 bg-amber-500 text-white font-bold">1</a>
-        <a href="#" class="px-3 py-1.5 border border-gray-200 bg-white hover:bg-gray-50">2</a>
-        <a href="#" class="px-3 py-1.5 border border-gray-200 bg-white hover:bg-gray-50">3</a>
-        <span class="px-2 text-gray-400">…</span>
-        <a href="#" class="px-3 py-1.5 border border-gray-200 bg-white hover:bg-gray-50">10</a>
-        <a href="#" class="px-3 py-1.5 border border-gray-200 bg-white hover:bg-gray-50">다음 →</a>
-    </nav>
+        <div class="bg-white p-4 border border-gray-200 shadow-sm sticky top-24">
+            <h3 class="text-xs font-black text-slate-900 mb-3 pb-2 border-b border-gray-100">🕒 최근 조회 상품</h3>
+            <ul class="space-y-4">
+                <li th:each="rv : ${recentViewedList}">
+                    <a th:href="@{/products/{seq}(seq=${rv.seq})}" class="group flex gap-2 items-center">
+                        <div class="w-10 h-10 bg-gray-100 flex-shrink-0">
+                            <img th:src="${rv.image}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <h4 th:text="${rv.name}" class="text-[11px] text-gray-700 truncate group-hover:text-amber-600 group-hover:underline">최근본상품명</h4>
+                            <p th:text="${#numbers.formatInteger(rv.price, 0, 'COMMA')} + '원'" class="text-xs font-bold text-slate-900 mt-0.5">0원</p>
+                        </div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
 
 </main>
 
