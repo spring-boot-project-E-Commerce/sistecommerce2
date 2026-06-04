@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/layout :: head('Gold Market | 회원가입')}"></head>
+
+<body class="bg-[#f5f6f9] text-gray-900 font-sans antialiased min-h-screen">
+
+    <div th:replace="~{fragments/header :: header}"></div>
+
+    <main class="max-w-screen-wide mx-auto px-4 py-16 flex justify-center">
+        <div class="w-full max-w-lg bg-white border border-gray-200 p-10">
+
+            <h2 class="text-2xl font-black text-slate-900 mb-1">회원가입</h2>
+            <p class="text-xs text-gray-400 mb-10">서비스 이용을 위한 약관에 동의해주세요.</p>
+
+            <!-- 단계 표시 -->
+            <div class="flex items-center mb-10">
+                <div class="flex items-center gap-2">
+                    <span
+                        class="w-6 h-6 rounded-full bg-gray-200 text-gray-400 text-xs font-bold flex items-center justify-center">1</span>
+                    <span class="text-xs text-gray-400">유형 선택</span>
+                </div>
+                <div class="flex-1 h-px bg-gray-200 mx-3"></div>
+                <div class="flex items-center gap-2">
+                    <span
+                        class="w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">2</span>
+                    <span class="text-xs font-bold text-amber-600">약관 동의</span>
+                </div>
+                <div class="flex-1 h-px bg-gray-200 mx-3"></div>
+                <div class="flex items-center gap-2">
+                    <span
+                        class="w-6 h-6 rounded-full bg-gray-200 text-gray-400 text-xs font-bold flex items-center justify-center">3</span>
+                    <span class="text-xs text-gray-400">정보 입력</span>
+                </div>
+            </div>
+
+            <form th:action="@{/member/signup/terms}" method="post" class="space-y-4">
+                <input type="hidden" name="type" th:value="${type}" />
+
+                <!-- 전체 동의 -->
+                <div class="border border-gray-200 p-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="agreeAll" class="accent-amber-500 w-4 h-4" />
+                        <span class="text-sm font-black text-slate-900">전체 동의</span>
+                    </label>
+                </div>
+
+                <!-- 개별 약관 -->
+                <div class="border border-gray-200 p-4 space-y-3">
+
+                    <!-- 이용약관 -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="terms" class="agree-item accent-amber-500 w-4 h-4" required />
+                            <span class="text-xs font-bold text-gray-700">[필수] 이용약관</span>
+                        </label>
+                        <div
+                            class="bg-gray-50 border border-gray-100 p-3 h-24 overflow-y-auto text-xs text-gray-500 leading-relaxed">
+                            Gold Market 서비스 이용약관 내용이 들어갑니다.
+                            회원은 본 약관에 따라 서비스를 이용할 수 있으며, 금지 행위 및 계정 해지 조건 등에 동의합니다.
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-100"></div>
+
+                    <!-- 개인정보 처리방침 -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="privacy" class="agree-item accent-amber-500 w-4 h-4"
+                                required />
+                            <span class="text-xs font-bold text-gray-700">[필수] 개인정보 처리방침</span>
+                        </label>
+                        <div
+                            class="bg-gray-50 border border-gray-100 p-3 h-24 overflow-y-auto text-xs text-gray-500 leading-relaxed">
+                            수집 항목: 이름, 아이디, 이메일, 전화번호, 주소, 생년월일<br>
+                            수집 목적: 서비스 제공, 본인 확인, 고객 응대<br>
+                            보유 기간: 회원 탈퇴 후 5년 (전자상거래법)<br>
+                            1년 이상 미접속 시 휴면 전환 후 개인정보 분리 보관
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-100"></div>
+
+                    <!-- 제3자 제공 -->
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="thirdParty" class="agree-item accent-amber-500 w-4 h-4" />
+                        <span class="text-xs text-gray-600">[선택] 개인정보 제3자 제공 동의</span>
+                    </label>
+
+                    <div class="border-t border-gray-100"></div>
+
+                    <!-- 마케팅 -->
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="marketing" class="agree-item accent-amber-500 w-4 h-4" />
+                        <span class="text-xs text-gray-600">[선택] 마케팅 정보 수신 동의 (이메일 / SMS / 푸시)</span>
+                    </label>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-slate-900 hover:bg-amber-500 text-white hover:text-slate-900 font-bold text-sm py-3 transition-colors">
+                    동의하고 계속하기
+                </button>
+            </form>
+
+            <div class="mt-4 text-center">
+                <a th:href="@{/member/signup/type}" class="text-xs text-gray-400 hover:text-amber-600">← 유형 선택으로
+                    돌아가기</a>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+    <script>
+        const agreeAll = document.getElementById('agreeAll');
+        const items = document.querySelectorAll('.agree-item');
+        agreeAll.addEventListener('change', () => {
+            items.forEach(item => item.checked = agreeAll.checked);
+        });
+        items.forEach(item => {
+            item.addEventListener('change', () => {
+                agreeAll.checked = [...items].every(i => i.checked);
+            });
+        });
+    </script>
+</body>
+
+</html>
