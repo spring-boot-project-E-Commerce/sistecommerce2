@@ -8,12 +8,11 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ProductDto {
+public class ProductCreateRequestDto {
 
     // =========================
     // 상품 기본 정보 영역
     // =========================
-    private Long seq;
     private Long sellerSeq;
     private Long categorySeq;
 
@@ -21,54 +20,41 @@ public class ProductDto {
     private Integer price;
     private String content;
 
-    private String saleStatus;
-    private String approvalStatus;
-    private String hideYn;
-    private String status;
-
-    private Integer viewCount;
-    private Double avgRating;
-    private Integer reviewCount;
-    private Integer salesCount;
-
-    private String createdDate;
-    private String updatedDate;
+    // =========================
+    // 관리자 배정 영역
+    // product_request.admin_seq에 들어감
+    // 테스트할 때는 1 넣으면 됨
+    // =========================
+    private Long adminSeq;
 
     // =========================
-    // 화면 출력용 추가 정보 영역
+    // 상품 이미지 영역
     // =========================
-    private String thumbnailUrl;
-    private boolean wished;
+    private List<ProductImageRequestDto> imageList = new ArrayList<>();
 
     // =========================
-    // 연관 데이터 목록 영역
+    // 상품 옵션 영역
     // =========================
-    private List<ProductImageDto> imageList = new ArrayList<>();
-    private List<ProductOptionDto> optionList = new ArrayList<>();
+    private List<ProductOptionRequestDto> optionList = new ArrayList<>();
 
 
     @Getter
     @Setter
-    public static class ProductImageDto {
-
-        // =========================
-        // 상품 이미지 정보 영역
-        // =========================
-        private Long seq;
-        private Long productSeq;
+    public static class ProductImageRequestDto {
 
         private String imageUrl;
         private String publicId;
+
+        // Y / N
         private String thumbnailYn;
 
         private Integer imageOrder;
-        private String status;
     }
 
 
     @Getter
     @Setter
-    public static class ProductOptionDto {
+    public static class ProductOptionRequestDto {
 
         // =========================
         // 상품 옵션 기본 정보 영역
@@ -102,10 +88,5 @@ public class ProductDto {
         private Integer stock;
         private Integer safetyStock;
         private Integer additionalPrice;
-
-        // =========================
-        // 화면 출력용 영역
-        // =========================
-        private String optionName;
     }
 }
