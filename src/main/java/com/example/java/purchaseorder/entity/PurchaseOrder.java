@@ -70,6 +70,6 @@ public class PurchaseOrder {
 	private Options options;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "group_buy_options_seq")
+	@JoinColumn(name = "group_buy_options_seq", nullable = true)
 	private GroupBuyOptions groupBuyOptions;
 }

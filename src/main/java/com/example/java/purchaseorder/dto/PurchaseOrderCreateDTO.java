@@ -16,7 +16,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class PurchaseOrderCreateDTO {
 
-    private PurchaseOrderStatus status;
     private int quantity;
     private Long supplyPrice;
     private Long totalPrice;
