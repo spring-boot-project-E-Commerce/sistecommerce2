@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body class="font-sans antialiased overflow-hidden">
+
+  <div class="flex h-screen w-screen relative">
+    
+    <div th:replace="~{admin/sidebar :: sidebar}"></div>
+
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden transition-opacity"></div>
+
+    <div class="flex-1 flex flex-col h-full overflow-hidden">
+      
+      <div th:replace="~{admin/header :: header}"></div>
+
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+        
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="card">
+            <div class="icon-box">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </div>
+            <div class="flex items-end justify-between">
+              <div>
+                <span class="text-label">Customers</span>
+                <h4 class="text-value">3,782</h4>
+              </div>
+              <span class="badge badge-success">+11.01%</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="icon-box">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+            </div>
+            <div class="flex items-end justify-between">
+              <div>
+                <span class="text-label">Orders</span>
+                <h4 class="text-value">5,359</h4>
+              </div>
+              <span class="badge badge-danger">-9.05%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-center mb-4">
+            <h4 class="text-title">Monthly Sales</h4>
+          </div>
+          <div id="monthly-sales-chart" class="w-full"></div> 
+        </div>
+
+        <div class="card">
+          <div class="flex flex-col justify-between gap-4 mb-6 md:flex-row md:items-center">
+            <div>
+              <h4 class="text-title">Statistics</h4>
+              <p class="text-label mt-1">Target you've set for each month</p>
+            </div>
+            <div class="flex items-center gap-4">
+              <button class="btn btn-outline">May 27 - Jun 2</button>
+            </div>
+          </div>
+          <div id="statistics-area-chart" class="w-full"></div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div class="card">
+            <h4 class="text-title mb-4">Quick Form</h4>
+            <form>
+              <div class="form-group">
+                <label class="text-label">Email Address</label>
+                <input type="email" class="form-input" placeholder="Enter your email">
+              </div>
+              <div class="form-group">
+                <label class="text-label">Password</label>
+                <input type="password" class="form-input" placeholder="Enter password">
+              </div>
+              <button type="button" class="btn btn-primary mt-2">Submit Data</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h4 class="text-title mb-4">Recent Activity List</h4>
+            <div class="list-container">
+              <div class="list-item">
+                <span class="text-label text-white">Project Update</span>
+                <span class="badge badge-success">Completed</span>
+              </div>
+              <div class="list-item">
+                <span class="text-label text-white">Server Maintenance</span>
+                <span class="badge badge-danger">Failed</span>
+              </div>
+              <div class="list-item">
+                <span class="text-label text-white">New User Registration</span>
+                <span class="text-label">2m ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+ <script th:inline="javascript">
+      document.addEventListener("DOMContentLoaded", function () {
+        
+        /* 1. 사이드바 토글 로직 */
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const desktopSidebarToggle = document.getElementById('desktopSidebarToggle');
+        const sidebarClose = document.getElementById('sidebarClose');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        
+        // --- 2. 대시보드 토글 로직 (여기로 이동) ---
+        sidebarToggle.addEventListener('click', () => {
+          sidebar.classList.remove('-translate-x-full');
+          sidebarOverlay.classList.remove('hidden');
+        });
+        
+
+        const closeSidebar = () => {
+          sidebar.classList.add('-translate-x-full');
+          sidebarOverlay.classList.add('hidden');
+        };
+        
+        sidebarClose.addEventListener('click', closeSidebar);
+        sidebarOverlay.addEventListener('click', closeSidebar);
+    
+        desktopSidebarToggle.addEventListener('click', () => {
+          sidebar.classList.toggle('md:translate-x-0');
+          sidebar.classList.toggle('md:-translate-x-full');
+          if(sidebar.classList.contains('md:-translate-x-full')) {
+            sidebar.classList.add('md:hidden');
+          } else {
+            setTimeout(() => sidebar.classList.remove('md:hidden'), 10);
+          }
+        });
+ 
+        const menuToggles = document.querySelectorAll('.menu-toggle');
+
+        // 1. 가져온 버튼 리스트를 forEach로 하나씩 순회
+        menuToggles.forEach(toggle => {
+          toggle.addEventListener('click', function() {
+            // 2. this는 방금 클릭한 바로 그 버튼을 뜻함
+            // 내 바로 다음 동생 요소(서브메뉴)를 찾음
+            const submenu = this.nextElementSibling;
+            
+            // 내 안쪽에 있는 화살표 아이콘을 찾음
+            // (HTML에서 class를 arrowIcon으로 썼는지 arrow-icon으로 썼는지 확인 후 맞춰서 적어)
+            const arrowIcon = this.querySelector('.arrowIcon'); 
+        
+            // 3. 찾은 짝꿍 요소들에만 숨김/회전 클래스 토글
+            if (submenu) {
+              submenu.classList.toggle('hidden');
+            }
+            if (arrowIcon) {
+              arrowIcon.classList.toggle('rotate-180');
+            }
+          });
+        });
+    
+     
+        // 라이트모드 다크모드 변경 설정한 javascript
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const body = document.body;
+        
+        themeToggle.addEventListener('click', () => {
+          body.classList.toggle('light-mode');
+          
+          // 아이콘 변경
+          if (body.classList.contains('light-mode')) {
+            themeIcon.textContent = '🌙'; // 라이트모드일 땐 달 아이콘
+          } else {
+            themeIcon.textContent = '☀️'; // 다크모드일 땐 해 아이콘
+          }
+        });
+        
+        
+        /* 2. 차트 렌더링 로직 (한 곳으로 통합) */
+        
+        // 백엔드에서 넘어온 데이터
+        const backendSalesData = /*[[${salesData}]]*/ [];
+    
+        // 바 차트
+        const salesBarOptions = {
+          series: [{ name: 'Sales', data: backendSalesData }],
+          chart: { type: 'bar', height: 240, toolbar: { show: false }, background: 'transparent' },
+          plotOptions: { bar: { horizontal: false, columnWidth: '30%', borderRadius: 4 } },
+          dataLabels: { enabled: false }, colors: ['#3C50E0'], theme: { mode: 'dark' },
+          grid: { borderColor: '#313D4A', strokeDashArray: 4 },
+          xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#8A99AF' } } },
+          yaxis: { labels: { style: { colors: '#8A99AF' } } },
+          tooltip: { theme: 'dark' }
+        };
+        new ApexCharts(document.querySelector("#monthly-sales-chart"), salesBarOptions).render();
+    
+        // 영역 차트
+        const statsAreaOptions = {
+          series: [
+            { name: 'Sales', data: [180, 190, 170, 160, 175, 165, 170, 200, 225, 210, 240, 235] },
+            { name: 'Revenue', data: [40, 32, 50, 42, 55, 40, 70, 100, 110, 120, 150, 140] }
+          ],
+          chart: { type: 'area', height: 320, toolbar: { show: false }, background: 'transparent' },
+          colors: ['#3C50E0', '#80CAEE'], stroke: { curve: 'smooth', width: 2 },
+          fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.0, stops: [0, 90, 100] } },
+          dataLabels: { enabled: false }, theme: { mode: 'dark' },
+          grid: { borderColor: '#313D4A', strokeDashArray: 4 },
+          xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#8A99AF' } } },
+          yaxis: { min: 0, max: 250, tickAmount: 5, labels: { style: { colors: '#8A99AF' } } },
+          tooltip: { theme: 'dark' }
+        };
+        new ApexCharts(document.querySelector("#statistics-area-chart"), statsAreaOptions).render();
+        
+      });
+    </script>
+</body>
+</html>
