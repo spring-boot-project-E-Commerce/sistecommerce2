@@ -177,12 +177,7 @@ public class StorefrontController {
         return "product/detail";
     }
 
-    // 공동구매 목록 (GB-01)
-    @GetMapping("/group-buys")
-    public String groupBuys(Model model) {
-        model.addAttribute("groupBuys", SampleProducts.groupBuys());
-        return "groupbuy/list";
-    }
+    // 공동구매 목록 (GB-01)은 GroupBuyViewController(/group-buys)로 이관 — DB 연결 완료
 
     // 공동구매 상세 (GB-02) — 동적 영역은 React mount (A방식)
     @GetMapping("/group-buys/{seq}")
