@@ -39,7 +39,7 @@ public class MemberSignupService {
     }
     
     // 1. 기본값 세팅 후 Member 저장
-    public Member saveMember(MemberDto memberDto) {
+    private Member saveMember(MemberDto memberDto) {
     	Member member = memberDto.toBuilder()
     			.status(1)
                 .role("ROLE_USER")
@@ -54,7 +54,7 @@ public class MemberSignupService {
     private void saveNotificationPreference(Member savedMember, Boolean marketing) {
         String yn = Boolean.TRUE.equals(marketing) ? "Y" : "N";
         notificationPreferenceRepository.save(NotificationPreference.builder()
-                .memberSeq(savedMember)
+                .member(savedMember)
                 .emailYn(yn).smsYn(yn).pushYn(yn)
                 .marketingEmailYn(yn).marketingSmsYn(yn)
                 .build());
@@ -63,7 +63,7 @@ public class MemberSignupService {
     // 3. 멤버십 테이블 생성 (미가입 상태)
     private void saveMemberships(Member savedMember) {
         membershipsRepository.save(Memberships.builder()
-                .memberSeq(savedMember)
+                .member(savedMember)
                 .status("NONE")
                 .build());
     }
@@ -72,8 +72,8 @@ public class MemberSignupService {
     private void saveMemberCoupon(Member savedMember) {
         Coupon coupon = couponRepository.getReferenceById(1L);
         memberCouponRepository.save(MemberCoupon.builder()
-                .memberSeq(savedMember)
-                .couponSeq(coupon)
+                .member(savedMember)
+                .coupon(coupon)
                 .status(0)
                 .build());
     }
