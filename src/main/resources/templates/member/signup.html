@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/layout :: head('Gold Market | 회원가입')}"></head>
+
+<body class="bg-[#f5f6f9] text-gray-900 font-sans antialiased min-h-screen">
+
+    <div th:replace="~{fragments/header :: header}"></div>
+
+    <main class="max-w-screen-wide mx-auto px-4 py-16 flex justify-center">
+        <div class="w-full max-w-lg bg-white border border-gray-200 p-10">
+
+            <h2 class="text-2xl font-black text-slate-900 mb-1">회원가입</h2>
+            <p class="text-xs text-gray-400 mb-8">Gold Market 회원이 되어 다양한 혜택을 누리세요.</p>
+            
+            <div><p>마케팅 동의 여부: <span th:text="${session.marketing}" style="color: red; font-weight: bold;"></span></p></div>
+
+            <form th:action="@{/member/signup}" method="post" class="space-y-5">
+
+                <!-- 아이디 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700">아이디 <span class="text-red-500">*</span></label>
+                    <div class="flex gap-2">
+                        <input type="text" name="username"
+                            class="flex-1 border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                            placeholder="아이디를 입력하세요" required/>
+                        <button type="button"
+                            class="shrink-0 bg-slate-900 hover:bg-amber-500 text-white hover:text-slate-900 text-xs font-bold px-4 py-2.5 transition-colors">
+                            중복확인
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 비밀번호 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700">비밀번호 <span class="text-red-500">*</span></label>
+                    <input type="password" name="password"
+                        class="w-full border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                        placeholder="비밀번호를 입력하세요" required/>
+                </div>
+
+                <!-- 비밀번호 확인 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700">비밀번호 확인 <span class="text-red-500">*</span></label>
+                    <input type="password" name="passwordConfirm"
+                        class="w-full border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                        placeholder="비밀번호를 다시 입력하세요" required/>
+                </div>
+
+                <!-- 닉네임 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700">닉네임 <span class="text-red-500">*</span></label>
+                    <div class="flex gap-2">
+                        <input type="text" name="nickname"
+                            class="flex-1 border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                            placeholder="닉네임을 입력하세요" required/>
+                        <button type="button"
+                            class="shrink-0 bg-slate-900 hover:bg-amber-500 text-white hover:text-slate-900 text-xs font-bold px-4 py-2.5 transition-colors">
+                            중복확인
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 이름 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700">이름 <span class="text-red-500">*</span></label>
+                    <input type="text" name="name"
+                        class="w-full border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                        placeholder="이름을 입력하세요" required/>
+                </div>
+
+                <!-- 이메일 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700">이메일 <span class="text-red-500">*</span></label>
+                    <div class="flex gap-2">
+                        <input type="email" name="email"
+                            class="flex-1 border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                            placeholder="이메일을 입력하세요" required/>
+                        <button type="button"
+                            class="shrink-0 bg-slate-900 hover:bg-amber-500 text-white hover:text-slate-900 text-xs font-bold px-4 py-2.5 transition-colors">
+                            인증메일 발송
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 전화번호 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700">전화번호</label>
+                    <input type="text" name="phone"
+                        class="w-full border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                        placeholder="010-0000-0000" />
+                </div>
+
+                <!-- 성별 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700" required>성별</label>
+                    <div class="flex gap-3">
+                        <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+                            <input type="radio" name="gender" value="M" class="accent-amber-500" /> 남성
+                        </label>
+                        <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+                            <input type="radio" name="gender" value="F" class="accent-amber-500" /> 여성
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 생년월일 -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-700">생년월일</label>
+                    <input type="date" name="birth"
+                        class="w-full border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors" />
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-slate-900 hover:bg-amber-500 text-white hover:text-slate-900 font-bold text-sm py-3 transition-colors mt-2">
+                    회원가입
+                </button>
+            </form>
+
+            <div class="mt-6 text-center text-xs text-gray-400">
+                이미 계정이 있으신가요?
+                <a th:href="@{/member/login}" class="text-amber-600 font-bold hover:underline ml-1">로그인</a>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+
+</html>
