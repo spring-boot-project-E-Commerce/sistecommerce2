@@ -17,11 +17,13 @@ import com.example.java.groupbuy.entity.GroupBuyOptions;
 import com.example.java.groupbuy.entity.GroupBuyStatus;
 import com.example.java.groupbuy.repository.GroupBuyOptionsRepository;
 import com.example.java.groupbuy.repository.GroupBuyRepository;
+import com.example.java.product.entity.Product;
 import com.example.java.product.entity.ProductImage;
 import com.example.java.product.repository.OptionsRepository;
 import com.example.java.product.repository.ProductImageRepository;
-import com.example.java.product.repository.ProductRepository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -30,9 +32,13 @@ public class GroupBuyService {
 	
     private final GroupBuyRepository groupBuyRepository;
     private final GroupBuyOptionsRepository groupBuyOptionsRepository;
-    private final ProductRepository productRepository;
     private final OptionsRepository optionsRepository;
     private final ProductImageRepository productImageRepository;
+
+    // ProductRepository가 dev에서 class(EntityManager 직접 구현)로 바뀌어 JpaRepository 메서드가 없음.
+    // 등록 시 Product FK만 세팅하면 되므로 EntityManager.getReference로 프록시 참조를 얻는다.
+    @PersistenceContext
+    private EntityManager entityManager;
 
     /** 썸네일 이미지가 없을 때 사용할 기본 이미지 (static 리소스). */
     private static final String DEFAULT_IMAGE = "/src/images/product/default.png";
@@ -87,7 +93,7 @@ public class GroupBuyService {
 
         LocalDateTime now = LocalDateTime.now();
         GroupBuy groupBuy = GroupBuy.builder()
-                .product(productRepository.getReferenceById(dto.getProductSeq()))
+                .product(entityManager.getReference(Product.class, dto.getProductSeq()))
                 .startAt(dto.getStartAt())
                 .endAt(dto.getEndAt())
                 .createdAt(now)
