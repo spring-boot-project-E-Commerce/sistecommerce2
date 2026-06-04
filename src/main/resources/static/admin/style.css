@@ -1,31 +1,45 @@
     /* ==========================================
        디자인 시스템 (CSS 변수)
        ========================================== */
+    /* 기본테마 (다크) */
     :root {
       --bg-body: #1A222C;
       --bg-panel: #24303F;
       --bg-sidebar: #1C2434;
       --bg-hover: #333A48;
-      
       --border-color: #313D4A;
-      
       --text-main: #DEE4EE;
       --text-muted: #8A99AF;
       --text-white: #FFFFFF;
-      
       --primary: #3C50E0;
       --success: #10B981;
       --danger: #F87171;
-      
       --radius-sm: 0.25rem;
       --radius-md: 0.375rem;
       --radius-lg: 0.5rem;
+    }
+    
+    /* 라이트 모드 테마 */
+    .light-mode {
+      --bg-body: #F1F5F9;
+      --bg-panel: #FFFFFF;
+      --bg-sidebar: #FFFFFF;
+      --bg-hover: #F1F5F9;
+      --border-color: #E2E8F0;
+      --text-main: #64748B;
+      --text-muted: #94A3B8;
+      --text-white: #1E293B;
+      --primary: #3C50E0;
     }
 
     /* ==========================================
        글로벌 스타일
        ========================================== */
-    body { background-color: var(--bg-body); color: var(--text-main); }
+    body { 
+      background-color: var(--bg-body); 
+      color: var(--text-main); 
+      transition: background-color 0.3s, color 0.3s;
+    }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--bg-sidebar); }
     ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }

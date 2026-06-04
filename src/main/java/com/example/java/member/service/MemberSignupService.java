@@ -1,5 +1,6 @@
 package com.example.java.member.service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class MemberSignupService {
     private final MembershipsRepository membershipsRepository;
     private final MemberCouponRepository memberCouponRepository;
     private final CouponRepository couponRepository;
+    private final PasswordEncoder passwordEncoder;
     
     @Transactional
     public boolean signup(MemberDto memberDto) {
@@ -42,6 +44,7 @@ public class MemberSignupService {
     			.status(1)
                 .role("ROLE_USER")
                 .loginType("LOCAL")
+                .password(passwordEncoder.encode(memberDto.getPassword()))
                 .build()
                 .toEntity();
     	return memberRepository.save(member);
