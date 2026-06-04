@@ -24,17 +24,13 @@ public class GlobalModelAdvice {
 
     private final CategoryService categoryService;
 
-    @ModelAttribute("auth")
-    public MemberDto auth(HttpSession session) {
-        return (MemberDto) session.getAttribute("auth");
-    }
 
     // 모든 페이지에 카테고리 트리 정보 주입
     @ModelAttribute("globalCategories")
     public List<CategoryDto> globalCategories() {
         return categoryService.getCategoryTree();
     }
-
+    
     // 세션의 최근 검색어 노출
     @SuppressWarnings("unchecked")
     @ModelAttribute("recentKeywords")
