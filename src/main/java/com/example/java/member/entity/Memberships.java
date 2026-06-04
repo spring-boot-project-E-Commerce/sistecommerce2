@@ -2,8 +2,6 @@ package com.example.java.member.entity;
 
 import java.time.LocalDateTime;
 
-import com.example.java.member.repository.MembershipsRepository;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -34,12 +32,12 @@ public class Memberships {
 	
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "member_seq", nullable = false)
-	private Member memberSeq;
+	private Member member;
 	
 	@Column(name = "billing_key", length = 200)
 	private String billingKey;
 	
-	@Column(name = "status", length = 20)
+	@Column(name = "status", length = 20, nullable = false)
 	private String status;
 	
 	@Column(name = "started_at")
