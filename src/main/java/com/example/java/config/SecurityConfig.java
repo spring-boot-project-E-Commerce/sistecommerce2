@@ -26,7 +26,10 @@ public class SecurityConfig {
                 // 공구 조회 REST API 허용 (비회원도 조회 가능)
                 .requestMatchers("/api/group-buys/**").permitAll()
                 // 나머지는 인증 필요
-                .anyRequest().authenticated()
+                //.anyRequest().authenticated()
+                
+                // TODO 개발용으로 모두허용 (나중에 없애야)
+                .anyRequest().permitAll()
             )
             .formLogin(form -> form
                 .loginPage("/member/login")         // 커스텀 로그인 페이지
