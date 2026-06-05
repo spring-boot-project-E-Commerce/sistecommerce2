@@ -34,7 +34,7 @@ public class QDelivery extends EntityPathBase<Delivery> {
 
     public final DateTimePath<java.time.LocalDateTime> estimated_date = createDateTime("estimated_date", java.time.LocalDateTime.class);
 
-    public final com.example.java.orders.controller.entity.QOrders orders;
+    public final com.example.java.orders.entity.QOrders orders;
 
     public final NumberPath<Long> purchaseOrderSeq = createNumber("purchaseOrderSeq", Long.class);
 
@@ -71,7 +71,7 @@ public class QDelivery extends EntityPathBase<Delivery> {
     public QDelivery(Class<? extends Delivery> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
         this.deliveryCompany = inits.isInitialized("deliveryCompany") ? new QDeliveryCompany(forProperty("deliveryCompany")) : null;
-        this.orders = inits.isInitialized("orders") ? new com.example.java.orders.controller.entity.QOrders(forProperty("orders")) : null;
+        this.orders = inits.isInitialized("orders") ? new com.example.java.orders.entity.QOrders(forProperty("orders")) : null;
     }
 
 }
