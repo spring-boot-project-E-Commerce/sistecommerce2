@@ -81,7 +81,7 @@ public class PurchaseOrderService {
 	
 	@Transactional(readOnly = true)
 	public List<PurchaseOrder> findAll() {
-		return purchaseOrderRepository.findAll();
+		return purchaseOrderRepository.findAllWithOptions();
 	}
 	
 	
