@@ -188,10 +188,21 @@ public class ProductController {
             Model model) {
 
         Long memberSeq = getLoginMemberSeq(session);
+        
+        System.out.println("session memberSeq = " + session.getAttribute("memberSeq"));
+        System.out.println("loginMemberSeq = " + memberSeq);
 
         ProductDto product = productService.getProductDetail(seq, memberSeq);
 
         model.addAttribute("product", product);
+
+        /*
+            로그인 회원 번호
+
+            리뷰 등록, 수정, 삭제 시
+            화면 JavaScript에서 현재 로그인 회원 번호를 사용할 수 있도록 내려줍니다.
+        */
+        model.addAttribute("loginMemberSeq", memberSeq);
 
         return "product/detail";
     }

@@ -1,22 +1,22 @@
 package com.example.java.purchaseorder.service;
 
-import java.sql.Date;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.java.groupbuy.entity.GroupBuyOptions;
 import com.example.java.groupbuy.repository.GroupBuyOptionsRepository;
 import com.example.java.product.entity.Options;
-import com.example.java.product.repository.OptionsRepository;
+import com.example.java.product.service.OptionsService;
 import com.example.java.purchaseorder.dto.PurchaseOrderCreateDTO;
 import com.example.java.purchaseorder.entity.PurchaseOrder;
 import com.example.java.purchaseorder.enums.PurchaseOrderStatus;
 import com.example.java.purchaseorder.enums.PurchaseOrderType;
 import com.example.java.purchaseorder.repository.PurchaseOrderRepository;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -25,8 +25,13 @@ import lombok.RequiredArgsConstructor;
 public class PurchaseOrderService {
 
 	private final PurchaseOrderRepository purchaseOrderRepository;
-	private final OptionsRepository optionsRepository;
+	private final OptionsService optionsService;
 	private final GroupBuyOptionsRepository groupBuyOptionsRepository;
+	
+	@Transactional(readOnly = true)
+	public PurchaseOrder findById(Long seq) {
+		return getPurchaseOrder(seq);
+	}
 	
 	public Long create(PurchaseOrderCreateDTO dto) {
 		Options options = getOptions(dto.getOptionsSeq());
@@ -74,15 +79,24 @@ public class PurchaseOrderService {
 	    }
 	}
 	
+	@Transactional(readOnly = true)
+	public List<PurchaseOrder> findAll() {
+		return purchaseOrderRepository.findAllWithOptions();
+	}
+	
+	
+	
+	
 	private void completeOrder(PurchaseOrder order) {
 	    order.changeStatus(PurchaseOrderStatus.입고완료);
-	    // TODO 재고 증가
-	    // order.getOptions().increaseStock(order.getQuantity());
+	    // 재고 증가
+	    optionsService.increaseStock(order.getOptions().getSeq(), order.getQuantity());
+	    
 	    // TODO 재고 이력 생성
 	    // stockHistoryRepository.createHistory(order);
 	    
 	    // 입고일(receivedDate) 저장
-	    order.changeReceivedDate(Date.valueOf(LocalDate.now()));
+	    order.changeReceivedDate(LocalDate.now());
 	}
 	private void defectiveOrder(PurchaseOrder order) {
 	    order.changeStatus(PurchaseOrderStatus.물품불량);
@@ -98,26 +112,27 @@ public class PurchaseOrderService {
 	}
 	private void delayedCompleteOrder(PurchaseOrder order) {
 	    order.changeStatus(PurchaseOrderStatus.지연입고);
-	    // TODO 재고 증가
-	    // order.getOptions().increaseStock(order.getQuantity());
+	    // 재고 증가
+	    optionsService.decreaseStock(order.getOptions().getSeq(), order.getQuantity());
+	    
 	    // TODO 재고 이력 생성
 	    // stockHistoryRepository.createHistory(order);
 	    
 	    // 입고일(receivedDate) 저장
-	    order.changeReceivedDate(Date.valueOf(LocalDate.now()));
+	    order.changeReceivedDate(LocalDate.now());
 	}
-	
 	
 	private PurchaseOrder createReOrder(PurchaseOrder originalOrder) {
 
-	    long diffMillis =
-	            originalOrder.getExpectedDate().getTime()
-	          - originalOrder.getOrderDate().getTime();
+	    long diffDays =
+	            ChronoUnit.DAYS.between(
+	                    originalOrder.getOrderDate(),
+	                    originalOrder.getExpectedDate());
 
-	    Date newOrderDate = Date.valueOf(LocalDate.now());
+	    LocalDate newOrderDate = LocalDate.now();
 
-	    Date newExpectedDate =
-	            new Date(newOrderDate.getTime() + diffMillis);
+	    LocalDate newExpectedDate =
+	            newOrderDate.plusDays(diffDays);
 
 	    PurchaseOrder reOrder = PurchaseOrder.builder()
 	            .status(PurchaseOrderStatus.발주요청)
@@ -147,8 +162,7 @@ public class PurchaseOrderService {
 		if (seq == null) {
 			throw new IllegalArgumentException("optionsSeq is required");
 		}
-		return optionsRepository.findById(seq)
-				.orElseThrow(() -> new IllegalArgumentException("Options not found"));
+		return optionsService.findById(seq);
 	}
 	
 	private GroupBuyOptions getGroupBuyOptions(Long seq) {
