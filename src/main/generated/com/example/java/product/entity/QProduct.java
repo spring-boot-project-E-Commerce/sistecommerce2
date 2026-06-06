@@ -47,6 +47,8 @@ public class QProduct extends EntityPathBase<Product> {
 
     public final StringPath status = createString("status");
 
+    public final StringPath thumbnailUrl = createString("thumbnailUrl");
+
     public final DateTimePath<java.time.LocalDateTime> updatedDate = createDateTime("updatedDate", java.time.LocalDateTime.class);
 
     public final NumberPath<Long> viewCount = createNumber("viewCount", Long.class);

@@ -1,7 +1,6 @@
 package com.example.java.product.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.java.product.dto.ProductDto;
-import com.example.java.product.dto.ProductPageResponseDto;
 import com.example.java.product.entity.Product;
 import com.example.java.product.repository.ProductListRepository;
 
@@ -69,68 +67,7 @@ public class ProductListService {
                 pageable
         );
 
-        return productPage.map(this::convertToDtoWithDetails);
-    }
-
-    public ProductPageResponseDto getProductsByPaging(int page, int size) {
-
-        if (page < 1) {
-            page = 1;
-        }
-
-        if (size < 1) {
-            size = 10;
-        }
-
-        if (size > 50) {
-            size = 50;
-        }
-
-        int offset = (page - 1) * size;
-        int totalCount = productListRepository.countProducts();
-        List<ProductDto> products = productListRepository.findProductsByPaging(offset, size);
-        int totalPages = (int) Math.ceil((double) totalCount / size);
-
-        return ProductPageResponseDto.builder()
-                .page(page)
-                .size(size)
-                .totalCount(totalCount)
-                .totalPages(totalPages)
-                .products(products)
-                .build();
-    }
-
-    private ProductDto convertToDtoWithDetails(Product product) {
-
-        ProductDto dto = product.toDto();
-
-        List<ProductDto.ProductImageDto> imageList = productListRepository.findProductImages(product.getSeq());
-        dto.setImageList(imageList);
-
-        String thumbnailUrl = imageList.stream()
-                .filter(img -> "Y".equals(img.getThumbnailYn()))
-                .map(ProductDto.ProductImageDto::getImageUrl)
-                .findFirst()
-                .orElse("/src/images/product/default.png");
-
-        dto.setImage(thumbnailUrl);
-        dto.setThumbnailUrl(thumbnailUrl);
-
-        List<ProductDto.ProductOptionDto> optionList = productListRepository.findProductOptions(product.getSeq());
-        dto.setOptionList(optionList);
-
-        List<String> optionStrings = optionList.stream()
-                .map(ProductDto.ProductOptionDto::getOptionName)
-                .filter(str -> str != null && !str.isBlank())
-                .collect(Collectors.toList());
-
-        if (optionStrings.isEmpty()) {
-            optionStrings.add("기본 옵션");
-        }
-
-        dto.setOptions(optionStrings);
-
-        return dto;
+        return productPage.map(Product::toDto);
     }
 
     private Sort getSortOption(String sortBy) {
