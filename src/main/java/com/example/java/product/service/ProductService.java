@@ -269,22 +269,7 @@ public class ProductService {
     }
 
 
-    /*
-        5-1. 필터링 조건이 추가된 상품 목록 조회
 
-        최소 가격, 최대 가격, 최소 평점 조건을 받을 수 있습니다.
-    */
-    public Page<ProductDto> getProductList(
-            Long categorySeq,
-            String keyword,
-            String sortBy,
-            int page,
-            Integer minPrice,
-            Integer maxPrice,
-            Double minRating) {
-
-        return getProductList(categorySeq, keyword, sortBy, page, minPrice, maxPrice, minRating, false);
-    }
 
 
     /*
@@ -364,7 +349,7 @@ public class ProductService {
                 .filter(img -> "Y".equals(img.getThumbnailYn()))
                 .map(ProductDto.ProductImageDto::getImageUrl)
                 .findFirst()
-                .orElse("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&auto=format&fit=crop");
+                .orElse("/src/images/product/default.png");
 
         dto.setImage(thumbnailUrl);
         dto.setThumbnailUrl(thumbnailUrl);

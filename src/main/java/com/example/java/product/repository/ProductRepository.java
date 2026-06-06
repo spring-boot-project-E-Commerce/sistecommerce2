@@ -1,5 +1,7 @@
 package com.example.java.product.repository;
 
+import static com.example.java.product.entity.QProduct.product;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -16,6 +18,9 @@ import com.example.java.product.dto.ProductDto;
 import com.example.java.product.dto.ProductDto.ProductImageDto;
 import com.example.java.product.dto.ProductDto.ProductOptionDto;
 import com.example.java.product.entity.Product;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -48,6 +53,7 @@ public class ProductRepository {
         NamedParameterJdbcTemplate은 :productSeq처럼 이름으로 값을 넣을 수 있습니다.
     */
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final JPAQueryFactory queryFactory;
 
     /*
         EntityManager
@@ -113,105 +119,51 @@ public class ProductRepository {
             String saleStatus,
             Pageable pageable) {
 
-        StringBuilder where = new StringBuilder("""
-                WHERE p.hide_yn = 'N'
-                  AND p.sale_status <> 'STOPPED'
-                  AND p.status = 'NORMAL'
-                """);
+        BooleanExpression condition = product.hideYn.eq("N")
+                .and(product.saleStatus.ne("STOPPED"))
+                .and(product.status.eq("NORMAL"));
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-
-        /*
-            카테고리 조건
-
-            categorySeqs가 null이 아니고 비어 있지 않을 때만
-            IN 조건을 추가합니다.
-        */
         if (categorySeqs != null && !categorySeqs.isEmpty()) {
-            where.append(" AND p.category_seq IN (:categorySeqs) ");
-            params.addValue("categorySeqs", categorySeqs);
+            condition = condition.and(product.categorySeq.in(categorySeqs));
         }
 
-        /*
-            검색어 조건
-
-            상품명과 검색어의 공백을 제거하고 비교합니다.
-        */
         if (keyword != null && !keyword.isBlank()) {
-            where.append("""
-                    AND LOWER(REPLACE(p.product_name, ' ', ''))
-                        LIKE LOWER('%' || REPLACE(:keyword, ' ', '') || '%')
-                    """);
-            params.addValue("keyword", keyword);
+            String cleanKeyword = keyword.replace(" ", "").toLowerCase();
+            condition = condition.and(
+                Expressions.stringTemplate("REPLACE(LOWER({0}), ' ', '')", product.productName)
+                           .contains(cleanKeyword)
+            );
         }
 
         if (minPrice != null) {
-            where.append(" AND p.price >= :minPrice ");
-            params.addValue("minPrice", minPrice);
+            condition = condition.and(product.price.goe(minPrice));
         }
 
         if (maxPrice != null) {
-            where.append(" AND p.price <= :maxPrice ");
-            params.addValue("maxPrice", maxPrice);
+            condition = condition.and(product.price.loe(maxPrice));
         }
 
         if (minRating != null) {
-            where.append(" AND p.avg_rating >= :minRating ");
-            params.addValue("minRating", minRating);
+            condition = condition.and(product.avgRating.goe(minRating));
         }
 
         if (saleStatus != null && !saleStatus.isBlank()) {
-            where.append(" AND p.sale_status = :saleStatus ");
-            params.addValue("saleStatus", saleStatus);
+            condition = condition.and(product.saleStatus.eq(saleStatus));
         }
 
-        /*
-            전체 개수 조회
+        List<Product> products = queryFactory
+                .selectFrom(product)
+                .where(condition)
+                .orderBy(product.seq.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
 
-            Page 객체를 만들려면 현재 페이지 데이터뿐 아니라
-            전체 상품 개수도 필요합니다.
-        */
-        String countSql = """
-                SELECT COUNT(*)
-                FROM product p
-                """ + where;
-
-        Integer totalCount = jdbcTemplate.queryForObject(countSql, params, Integer.class);
-
-        /*
-            페이징 값 추가
-        */
-        params.addValue("offset", pageable.getOffset());
-        params.addValue("size", pageable.getPageSize());
-
-        /*
-            실제 상품 목록 조회 SQL
-        */
-        String sql = """
-                SELECT
-                    p.seq,
-                    p.seller_seq,
-                    p.category_seq,
-                    p.product_name,
-                    p.price,
-                    p.content,
-                    p.sale_status,
-                    p.approval_status,
-                    p.hide_yn,
-                    p.view_count,
-                    p.avg_rating,
-                    p.review_count,
-                    p.sales_count,
-                    p.created_date,
-                    p.updated_date,
-                    p.status
-                FROM product p
-                """ + where + """
-                ORDER BY p.seq DESC
-                OFFSET :offset ROWS FETCH NEXT :size ROWS ONLY
-                """;
-
-        List<Product> products = jdbcTemplate.query(sql, params, this::mapProduct);
+        Long totalCount = queryFactory
+                .select(product.count())
+                .from(product)
+                .where(condition)
+                .fetchOne();
 
         return new PageImpl<>(
                 products,

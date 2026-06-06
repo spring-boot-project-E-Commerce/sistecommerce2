@@ -1,5 +1,6 @@
 package com.example.java.product.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -110,31 +111,23 @@ public class ProductController {
         Page<ProductDto> productPage = productService.getProductList(categorySeq, keyword, sortBy, page, minPrice, maxPrice, minRating, hideStockVal);
         List<ProductDto> productList = productPage.getContent();
         
-        // 추천 상품 목록 (실제 DB 평점 높은 순 상위 5개 추천)
+        // 추천 상품 목록 (실제 DB 평점 높은 순 상위 5개 추천 - 추후 로직 수정 예정***)
         List<ProductDto> recommendedList = productService.getProductList(null, null, "rating", 0)
                 .getContent().stream().limit(5).collect(java.util.stream.Collectors.toList());
 
-        // 최근 조회 상품 목록 (세션에 저장된 상품 ID 순서대로 가져오기, 없으면 인기 조회 상품 대체)
+        // 최근 조회 상품 목록 (세션에 저장된 상품 ID 순서대로 가져오기)
         @SuppressWarnings("unchecked")
         List<Long> recentViewedSeqs = (List<Long>) session.getAttribute("recentViewedSeqs");
-        List<ProductDto> recentViewedList = new java.util.ArrayList<>();
+        List<ProductDto> recentViewedList = new ArrayList<>();
         if (recentViewedSeqs != null && !recentViewedSeqs.isEmpty()) {
             for (Long rSeq : recentViewedSeqs) {
                 try {
                     ProductDto p = productService.getProductWithoutViewCount(rSeq);
-                    // 삭제되었거나 접근 제한된 상품 필터링
-                    if (!"DELETED".equals(p.getStatus()) && !"Y".equals(p.getHideYn()) && !"STOPPED".equals(p.getSaleStatus())) {
-                        recentViewedList.add(p);
-                    }
+                    recentViewedList.add(p);
                 } catch (Exception e) {
                     // 없는 상품은 건너뜀
                 }
             }
-        }
-        if (recentViewedList.isEmpty()) {
-            // 최근 본 상품이 없을 시 인기 상품(조회수 기준)으로 임시 노출
-            recentViewedList = productService.getProductList(null, null, "salesCount", 0)
-                    .getContent().stream().limit(5).collect(java.util.stream.Collectors.toList());
         }
 
         // 10개 단위 페이징 블록 계산 (고정 블록 방식)

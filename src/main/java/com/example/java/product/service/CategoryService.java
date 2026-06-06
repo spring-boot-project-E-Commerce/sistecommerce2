@@ -57,25 +57,34 @@ public class CategoryService {
                 .build();
     }
 
-    // 특정 카테고리 ID를 기점으로 모든 하위 카테고리(소분류 포함) ID 목록을 반환
+    // 특정 카테고리 ID를 기점으로 모든 하위 카테고리 ID 목록을 반환 (입력된 분류의 깊이에 따라 가변적으로 탐색)
     public List<Long> getDescendantCategorySeqs(Long categorySeq) {
         if (categorySeq == null) {
             return null;
         }
         List<Category> allCategories = categoryRepository.findAll();
 
+        Category current = allCategories.stream()
+                .filter(c -> c.getSeq().equals(categorySeq))
+                .findFirst()
+                .orElse(null);
+
+        if (current == null) {
+            return new ArrayList<>();
+        }
+
         List<Long> seqs = new ArrayList<>();
         seqs.add(categorySeq);
 
-        // 1단계 하위 카테고리 탐색 (중분류)
+        // 1단계 직계 하위 카테고리 탐색 (대분류 입력 시 중분류 탐색, 중분류 입력 시 소분류 탐색)
         List<Long> children1 = allCategories.stream()
                 .filter(c -> categorySeq.equals(c.getParentSeq()))
                 .map(Category::getSeq)
                 .collect(Collectors.toList());
         seqs.addAll(children1);
 
-        // 2단계 하위 카테고리 탐색 (소분류)
-        if (!children1.isEmpty()) {
+        // 2단계 하위 카테고리 탐색 (대분류 입력 시에만 소분류까지 추가 탐색)
+        if (current.getDepthLevel() == 0 && !children1.isEmpty()) {
             List<Long> children2 = allCategories.stream()
                     .filter(c -> c.getParentSeq() != null && children1.contains(c.getParentSeq()))
                     .map(Category::getSeq)
@@ -87,7 +96,7 @@ public class CategoryService {
 
     // 특정 카테고리 ID로부터 루트 대분류까지의 경로를 반환
     public List<CategoryDto> getCategoryPath(Long categorySeq) {
-        List<CategoryDto> path = new java.util.ArrayList<>();
+        List<CategoryDto> path = new ArrayList<>();
         if (categorySeq == null) {
             return path;
         }
