@@ -21,7 +21,7 @@ public class OptionsService {
 	}
 	
 	@Transactional
-	public void receiveStock(Long optionSeq, int quantity) {
+	public void increaseStock(Long optionSeq, int quantity) {
 
 	    Options option = optionsRepository.findById(optionSeq)
 	            .orElseThrow(() -> new IllegalArgumentException("옵션 없음"));
@@ -30,7 +30,7 @@ public class OptionsService {
 	}
 	
 	@Transactional
-	public void releaseStock(Long optionSeq, int quantity) {
+	public void decreaseStock(Long optionSeq, int quantity) {
 
 	    Options option = optionsRepository.findById(optionSeq)
 	            .orElseThrow(() -> new IllegalArgumentException("옵션 없음"));
