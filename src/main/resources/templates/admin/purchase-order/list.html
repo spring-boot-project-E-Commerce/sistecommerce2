@@ -8,6 +8,99 @@
 <body>
 
     <h2>Purchase Order 목록 (임시)</h2>
+    
+    <form method="get" th:action="@{/admin/purchase-orders}">
+    <!-- 상태 -->
+    <div>
+        <label>
+            <input type="radio"
+                   name="status"
+                   value=""
+                   th:checked="${search.status == null}">
+            전체
+        </label>
+        <label>
+            <input type="radio"
+                   name="status"
+                   value="발주요청"
+                   th:checked="${search.status != null and search.status.name() == '발주요청'}">
+            발주요청
+        </label>
+        <label>
+            <input type="radio"
+                   name="status"
+                   value="입고완료"
+                   th:checked="${search.status != null and search.status.name() == '입고완료'}">
+            입고완료
+        </label>
+    </div>
+    <br>
+    <!-- 총금액 -->
+    <div>
+	    <span>총금액</span>	
+	    <input type="number"
+	           name="totalPriceFrom"
+	           placeholder="최소금액"
+	           th:value="${search.totalPriceFrom}">
+	
+	    ~
+	
+	    <input type="number"
+	           name="totalPriceTo"
+	           placeholder="최대금액"
+	           th:value="${search.totalPriceTo}">
+	</div>
+	<br>
+    <!-- 발주일 -->
+    <div>
+        <span>발주일</span>
+        <input type="date"
+               name="orderDateFrom"
+               th:value="${search.orderDateFrom}">
+
+        ~
+
+        <input type="date"
+               name="orderDateTo"
+               th:value="${search.orderDateTo}">
+    </div>
+    <br>
+    <!-- 예정일 -->
+    <div>
+        <span>예정일</span>
+        <input type="date"
+               name="expectedDateFrom"
+               th:value="${search.expectedDateFrom}">
+
+        ~
+
+        <input type="date"
+               name="expectedDateTo"
+               th:value="${search.expectedDateTo}">
+    </div>
+    <br>
+    <!-- 키워드 -->
+    <div>
+        <select name="keywordType">
+            <option value="">선택</option>
+            <option value="product"
+                    th:selected="${search.keywordType == 'product'}">
+                상품명
+            </option>
+            <option value="option"
+                    th:selected="${search.keywordType == 'option'}">
+                옵션명
+            </option>
+        </select>
+        <input type="text"
+               name="keyword"
+               placeholder="검색어 입력"
+               th:value="${search.keyword}">
+	    <button type="submit">검색</button>
+    </div>
+    <br>
+</form>
+<hr>
 
 	<button onclick="updateSelectedStatus('입고완료')">입고완료</button>
 	<button onclick="updateSelectedStatus('물품불량')">물품불량</button>
