@@ -2,6 +2,7 @@ package com.example.java.product.controller;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -96,9 +97,9 @@ public class ProductListController {
         Page<ProductDto> productPage = productListService.getProductList(categorySeq, keyword, sort, page, minPrice, maxPrice, minRating, hideStockVal);
         List<ProductDto> productList = productPage.getContent();
 
-        // 추천 상품 목록 (평점 높은 순 상위 5개 추천)
-        List<ProductDto> recommendedList = productListService.getProductList(null, null, "rating", 0)
-                .getContent().stream().limit(5).collect(java.util.stream.Collectors.toList());
+        // 추천 상품 목록 (판매량*50 + 조회수*30 + 평점*10 + 리뷰수*10 순 상위 5개 추천)
+        List<ProductDto> recommendedList = productListService.getProductList(null, null, "recommend", 0)
+                .getContent().stream().limit(5).collect(Collectors.toList());
 
         // 최근 조회 상품 목록 (세션에 저장된 상품 ID 순서대로 가져오기)
         @SuppressWarnings("unchecked")

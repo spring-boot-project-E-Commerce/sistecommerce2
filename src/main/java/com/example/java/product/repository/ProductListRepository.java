@@ -95,13 +95,21 @@ public class ProductListRepository {
         );
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
 	private OrderSpecifier<?> getOrderSpecifier(org.springframework.data.domain.Sort sort) {
         if (sort.isUnsorted()) {
             return product.seq.desc();
         }
         PathBuilder<Product> entityPath = new PathBuilder<>(Product.class, "product");
         for (org.springframework.data.domain.Sort.Order order : sort) {
+            if ("recommend".equals(order.getProperty())) {
+                com.querydsl.core.types.dsl.NumberExpression<Double> recommendScore = 
+                    product.salesCount.doubleValue().multiply(50.0)
+                    .add(product.viewCount.doubleValue().multiply(30.0))
+                    .add(product.avgRating.multiply(10.0))
+                    .add(product.reviewCount.doubleValue().multiply(10.0));
+                return new OrderSpecifier(com.querydsl.core.types.Order.DESC, recommendScore);
+            }
             Order direction = order.isAscending() ? Order.ASC : Order.DESC;
             return new OrderSpecifier(direction, entityPath.get(order.getProperty()));
         }
