@@ -118,7 +118,7 @@ public class PurchaseOrderService {
 	private void delayedCompleteOrder(PurchaseOrder order) {
 	    order.changeStatus(PurchaseOrderStatus.지연입고);
 	    // 재고 증가
-	    optionsService.decreaseStock(order.getOptions().getSeq(), order.getQuantity());
+	    optionsService.increaseStock(order.getOptions().getSeq(), order.getQuantity());
 	    
 	    // TODO 재고 이력 생성
 	    // stockHistoryRepository.createHistory(order);
