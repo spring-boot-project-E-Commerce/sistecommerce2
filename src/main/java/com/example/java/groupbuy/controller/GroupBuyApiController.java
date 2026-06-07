@@ -34,7 +34,7 @@ public class GroupBuyApiController {
     /** 공구 상세. */
     // GET /api/group-buys/7  (상세)
     @GetMapping("/{seq}")
-    public GroupBuyDetailResponse detail(@PathVariable Long seq) {
+    public GroupBuyDetailResponse detail(@PathVariable(name = "seq") Long seq) {
         return groupBuyService.getDetail(seq);
     }
 }
