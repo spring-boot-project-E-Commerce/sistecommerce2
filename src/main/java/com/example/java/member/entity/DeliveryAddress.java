@@ -1,5 +1,6 @@
 package com.example.java.member.entity;
 
+import com.example.java.member.dto.DeliveryAddressDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -55,6 +56,22 @@ public class DeliveryAddress {
 
     public void clearDefault() {
         this.defaultYn = "N";
+    }
+
+    public void setDefault() {
+        this.defaultYn = "Y";
+    }
+
+    public void update(DeliveryAddressDto dto) {
+        this.addressAlias   = dto.getAddressAlias();
+        this.recipientName  = dto.getRecipientName();
+        this.recipientPhone = dto.getRecipientPhone();
+        this.zipcode        = dto.getZipcode();
+        this.address        = dto.getAddress();
+        this.addressDetail  = dto.getAddressDetail();
+        this.note           = dto.getNote();
+        this.entryCode      = dto.getEntryCode();
+        this.defaultYn      = dto.getDefaultYn();
     }
 
 }

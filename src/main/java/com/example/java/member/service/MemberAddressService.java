@@ -38,15 +38,50 @@ public class MemberAddressService {
                 .build();
 
         if ("Y".equals(deliveryAddressDto.getDefaultYn())) {
-            memberAddressRepository.findByMember_SeqOrderByDefaultYnDesc(deliveryAddressDto.getMemberSeq()).stream()
-                    .filter(a -> "Y".equals(a.getDefaultYn()))
-                    .forEach(DeliveryAddress::clearDefault);
+            clearCurrentDefault(deliveryAddressDto.getMemberSeq());
         }
 
         memberAddressRepository.save(deliveryAddress);
     }
 
+    @Transactional
+    public void setDefault(Long addressSeq, Long memberSeq) {
+        clearCurrentDefault(memberSeq);
+        memberAddressRepository.findById(addressSeq)
+                .ifPresent(DeliveryAddress::setDefault);
+    }
+
     public List<DeliveryAddress> myAddress(Long memberSeq) {
         return memberAddressRepository.findByMember_SeqOrderByDefaultYnDesc(memberSeq);
+    }
+
+    public DeliveryAddress getAddress(Long addressSeq, Long memberSeq) {
+        return memberAddressRepository.findById(addressSeq)
+                .filter(a -> a.getMember().getSeq().equals(memberSeq))
+                .orElseThrow(() -> new IllegalArgumentException("배송지를 찾을 수 없습니다."));
+    }
+
+    @Transactional
+    public void updateAddress(Long addressSeq, DeliveryAddressDto dto) {
+        DeliveryAddress address = memberAddressRepository.findById(addressSeq)
+                .filter(a -> a.getMember().getSeq().equals(dto.getMemberSeq()))
+                .orElseThrow(() -> new IllegalArgumentException("배송지를 찾을 수 없습니다."));
+        if ("Y".equals(dto.getDefaultYn())) {
+            clearCurrentDefault(dto.getMemberSeq());
+        }
+        address.update(dto);
+    }
+
+    @Transactional
+    public void deleteAddress(Long addressSeq, Long memberSeq) {
+        memberAddressRepository.findById(addressSeq)
+                .filter(a -> a.getMember().getSeq().equals(memberSeq))
+                .ifPresent(memberAddressRepository::delete);
+    }
+
+    private void clearCurrentDefault(Long memberSeq) {
+        memberAddressRepository.findByMember_SeqOrderByDefaultYnDesc(memberSeq).stream()
+                .filter(a -> "Y".equals(a.getDefaultYn()))
+                .forEach(DeliveryAddress::clearDefault);
     }
 }
