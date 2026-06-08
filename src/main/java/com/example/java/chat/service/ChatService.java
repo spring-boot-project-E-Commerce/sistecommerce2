@@ -32,7 +32,7 @@ public class ChatService {
     }
     
     public List<ChatRoom> getRoomsByMember(Long memberId) {
-        return chatRoomRepository.findByMemberId(memberId);
+        return chatRoomRepository.findByMemberSeq(memberId);
     }
 
     @Transactional
