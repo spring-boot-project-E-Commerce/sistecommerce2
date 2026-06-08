@@ -1,6 +1,7 @@
 package com.example.java.stockhistory.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +21,14 @@ public class StockHistoryService {
 
 	private final StockHistoryRepository stockHistoryRepository;
 	
-//	public List<StockHistoryListDTO>
+	public List<StockHistory> getList() {
+		return stockHistoryRepository.findAll(); 
+	}
 	
 	@Transactional
-	public void createInStockHistory(Options options, int quantity, StockHistorySourceType sourceType, String reason) {
+	public void createInStockHistory(Options options, int quantity,
+									StockHistorySourceType sourceType, String reason) {
+		
 	    int before = options.getStock();
 	    int after = before + quantity;
 
@@ -42,7 +47,9 @@ public class StockHistoryService {
 	}
 	
 	@Transactional
-	public void createOutStockHistory(Options options, int quantity, StockHistorySourceType sourceType, String reason) {
+	public void createOutStockHistory(Options options, int quantity,
+										StockHistorySourceType sourceType, String reason) {
+		
 	    int before = options.getStock();
 	    int after = before - quantity;
 

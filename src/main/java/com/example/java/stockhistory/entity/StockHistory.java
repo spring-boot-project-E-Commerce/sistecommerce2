@@ -67,6 +67,6 @@ public class StockHistory {
 	private LocalDateTime createdAt;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "option_seq", nullable = false)
+	@JoinColumn(name = "options_seq", nullable = false)
 	private Options options;
 }
