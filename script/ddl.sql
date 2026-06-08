@@ -1249,3 +1249,7 @@ ALTER TABLE memberships MODIFY (
     started_at  timestamp NULL,
     expire_at   timestamp NULL
 );
+
+alter table cart Drop column update_date;
+
+select * from cart;
