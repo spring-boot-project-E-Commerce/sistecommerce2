@@ -1,17 +1,15 @@
 package com.example.java.groupbuy.repository;
 
-import java.util.List;
-import java.util.Optional;
-
+import com.example.java.groupbuy.entity.GroupBuy;
+import com.example.java.groupbuy.entity.GroupBuyOptions;
+import jakarta.persistence.LockModeType;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
-import com.example.java.groupbuy.entity.GroupBuy;
-import com.example.java.groupbuy.entity.GroupBuyOptions;
-
-import jakarta.persistence.LockModeType;
+import java.util.List;
+import java.util.Optional;
 
 public interface GroupBuyOptionsRepository extends JpaRepository<GroupBuyOptions, Long> {
     List<GroupBuyOptions> findByGroupBuy(GroupBuy groupBuy);
@@ -31,4 +29,5 @@ public interface GroupBuyOptionsRepository extends JpaRepository<GroupBuyOptions
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from GroupBuyOptions o where o.seq = :seq")
     Optional<GroupBuyOptions> findBySeqForUpdate(@Param("seq") Long seq);
+
 }
