@@ -66,7 +66,7 @@ public class OrdersQueryRepositoryImpl implements OrdersQueryRepository {
                         productImage.imageUrl
                 )
                 .from(options)
-                .join(product).on(options.productSeq.eq(product.seq))
+                .join(product).on(options.product.seq.eq(product.seq))
                 .leftJoin(productImage).on(
                         productImage.productSeq.eq(product.seq)
                                 .and(productImage.status.eq("NORMAL"))
