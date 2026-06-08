@@ -1,6 +1,6 @@
 package com.example.java.cart.dto;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,7 +22,7 @@ public class CartDto {
 
     private int quantity;
 
-    private LocalDateTime createdDate;
+    private LocalDate createdDate;
 
     // ── 상품 정보 (조회 시 함께 표시) ──
     private Long productSeq;
@@ -39,4 +39,5 @@ public class CartDto {
     public int getItemTotal() {
         return (price + additionalPrice) * quantity;
     }
+
 }
