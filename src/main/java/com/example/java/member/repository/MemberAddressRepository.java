@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface MemberAddressRepository extends JpaRepository<DeliveryAddress, Long> {
-    List<DeliveryAddress> findByMember_Seq(Long memberSeq);
+    List<DeliveryAddress> findByMember_SeqOrderByDefaultYnDesc(Long memberSeq);
 }

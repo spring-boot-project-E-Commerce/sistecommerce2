@@ -135,7 +135,7 @@
                         주소 검색
                     </button>
                 </div>
-                <input type="text" id="address" placeholder="기본 주소" readonly
+                <input type="text" id="baseAddress" placeholder="기본 주소" readonly
                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-slate-50 mb-2">
                 <input type="text" id="addressDetail" placeholder="상세 주소"
                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
@@ -192,7 +192,7 @@
                 document.getElementById('recipientName').value = d.recipientName;
                 document.getElementById('recipientPhone').value = d.recipientPhone;
                 document.getElementById('zipcode').value = d.zipcode;
-                document.getElementById('address').value = d.address;
+                document.getElementById('baseAddress').value = d.address;
                 document.getElementById('addressDetail').value = d.addressDetail || '';
                 document.getElementById('note').value = d.note || '';
                 document.getElementById('entryCode').value = d.entryCode || '';
@@ -209,7 +209,7 @@
         new daum.Postcode({
             oncomplete: function(data) {
                 document.getElementById('zipcode').value = data.zonecode;
-                document.getElementById('address').value = data.roadAddress || data.jibunAddress;
+                document.getElementById('baseAddress').value = data.roadAddress || data.jibunAddress;
                 document.getElementById('addressDetail').focus();
             }
         }).open();
@@ -222,7 +222,7 @@
             recipientName:  document.getElementById('recipientName').value,
             recipientPhone: document.getElementById('recipientPhone').value,
             zipcode:        document.getElementById('zipcode').value,
-            address:        document.getElementById('address').value,
+            address:        document.getElementById('baseAddress').value,
             addressDetail:  document.getElementById('addressDetail').value,
             note:           document.getElementById('note').value,
             entryCode:      document.getElementById('entryCode').value,
