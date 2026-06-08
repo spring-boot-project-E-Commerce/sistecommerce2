@@ -1,6 +1,7 @@
 package com.example.java.purchaseorder.service;
 
 import java.time.LocalDate;
+
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -23,6 +24,8 @@ import com.example.java.purchaseorder.enums.PurchaseOrderStatus;
 import com.example.java.purchaseorder.enums.PurchaseOrderType;
 import com.example.java.purchaseorder.repository.PurchaseOrderQueryDslRepository;
 import com.example.java.purchaseorder.repository.PurchaseOrderRepository;
+import com.example.java.stockhistory.enums.StockHistorySourceType;
+import com.example.java.stockhistory.service.StockHistoryService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,6 +39,7 @@ public class PurchaseOrderService {
 	private final OptionsService optionsService;
 	private final GroupBuyOptionsRepository groupBuyOptionsRepository;
 	private final AdminPaymentService adminPaymentService;
+	private final StockHistoryService stockHistoryService;
 	
 	@Transactional(readOnly = true)
 	public PurchaseOrder findById(Long seq) {
@@ -128,8 +132,10 @@ public class PurchaseOrderService {
 	    // 재고 증가
 	    optionsService.increaseStock(order.getOptions().getSeq(), order.getQuantity());
 	    
-	    // TODO 재고 이력 생성
-	    // stockHistoryRepository.createHistory(order);
+	    // 재고 이력 생성
+	    stockHistoryService.createInStockHistory(
+	    		order.getOptions(), order.getQuantity(),
+	    		StockHistorySourceType.발주, "입고완료");
 	    
 	    // 입고일(receivedDate) 저장
 	    order.changeReceivedDate(LocalDate.now());
@@ -154,8 +160,10 @@ public class PurchaseOrderService {
 	    // 재고 증가
 	    optionsService.increaseStock(order.getOptions().getSeq(), order.getQuantity());
 	    
-	    // TODO 재고 이력 생성
-	    // stockHistoryRepository.createHistory(order);
+	    // 재고 이력 생성
+	    stockHistoryService.createInStockHistory(
+	    		order.getOptions(), order.getQuantity(),
+	    		StockHistorySourceType.발주, "입고완료");
 	    
 	    // 입고일(receivedDate) 저장
 	    order.changeReceivedDate(LocalDate.now());
