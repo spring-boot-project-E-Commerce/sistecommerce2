@@ -145,11 +145,21 @@
         </div>
 
         <!-- 상품 상세 설명 영역 -->
-        <div id="detailSection" class="p-8 text-sm text-gray-700 leading-relaxed min-h-[300px]">
-            <p th:text="*{content}">
-                상품 상세 설명
-            </p>
-        </div>
+		<!--
+		    product.content 안에는 상품 등록 화면에서 작성한 HTML이 들어 있습니다.
+
+		    예:
+		    <img src="...">
+		    <br>
+		    <p>상품 설명</p>
+
+		    th:text를 사용하면 HTML 태그가 문자 그대로 출력됩니다.
+		    th:utext를 사용해야 HTML 태그가 실제 태그로 해석되어
+		    이미지와 줄바꿈이 화면에 정상 표시됩니다.
+		-->
+		<div th:utext="${product.content}">
+		    상품 상세 설명
+		</div>
 
         <!-- 상품평 영역 -->
         <div id="reviewSection" class="hidden p-8 min-h-[300px]">
@@ -735,27 +745,63 @@
 </script>
 
 <script>
-    function addToCart() {
-        const optionsSeq = document.getElementById('optionsSeq').value;
-        const quantity   = document.getElementById('quantity').value;
+	/*
+	    장바구니 담기 버튼 클릭 시 실행됩니다.
 
-        if (!optionsSeq) {
-            alert('옵션을 선택해주세요.');
-            return;
-        }
+	    처리 순서:
+	    1. 옵션 선택 여부 확인
+	    2. 수량 확인
+	    3. POST /api/cart 요청
+	    4. 로그인하지 않은 경우 로그인 페이지로 이동
+	    5. 성공 시 알림 표시
+	*/
+	function addToCart() {
+	    const optionsSeq = document.getElementById('optionsSeq').value;
+	    const quantity = document.getElementById('quantity').value;
 
-        fetch('/api/cart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ optionsSeq: optionsSeq, quantity: quantity })
-        })
-        .then(res => {
-            // 비로그인 처리 추가 필요
-            if (!res.ok) throw new Error();
-            alert('장바구니에 담겼습니다.');
-        })
-        .catch(() => alert('오류가 발생했습니다.'));
-    }
+	    if (!optionsSeq) {
+	        alert('옵션을 선택해주세요.');
+	        return;
+	    }
+
+	    if (!quantity || Number(quantity) < 1) {
+	        alert('수량은 1개 이상이어야 합니다.');
+	        return;
+	    }
+
+	    fetch('/api/cart', {
+	        method: 'POST',
+	        headers: {
+	            'Content-Type': 'application/json'
+	        },
+	        credentials: 'same-origin',
+	        body: JSON.stringify({
+	            optionsSeq: Number(optionsSeq),
+	            quantity: Number(quantity)
+	        })
+	    })
+	    .then(async function (res) {
+
+	        const message = await res.text();
+
+	        if (res.status === 401) {
+	            alert(message || '로그인이 필요합니다.');
+	            location.href = '/member/login';
+	            return;
+	        }
+
+	        if (!res.ok) {
+	            alert(message || '장바구니 담기에 실패했습니다.');
+	            return;
+	        }
+
+	        alert(message || '장바구니에 담겼습니다.');
+	    })
+	    .catch(function (error) {
+	        console.error(error);
+	        alert('오류가 발생했습니다.');
+	    });
+	}
 </script>
 
 </body>
