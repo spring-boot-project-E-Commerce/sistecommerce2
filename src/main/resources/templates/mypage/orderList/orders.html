@@ -111,7 +111,6 @@
                              th:data-company-name="${d.companyName}">
                             <div class="mb-5 flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div class="flex flex-wrap items-center gap-2" th:if="${d.deliveryStatus == 'DELIVERED'}">
-                                	<span class="h-2 w-2 rounded-full bg-amber-500"></span>
                                     <span class="status-badge status-DELIVERED">배송완료</span>
                                     <span class="text-xs font-semibold text-slate-500" th:if="${d.completedAt != null and !d.completedAt.isEmpty()}"
                                           th:text="${'도착일 ' + d.completedAt}">도착일 2026.06.08 12:00</span>

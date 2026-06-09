@@ -15,9 +15,9 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class MyPageOrderListService {
 
-    private final MyPageOrderListRepository myPageOrderListQueryRepository;
+    private final MyPageOrderListRepository myPageOrderListRepository;
 
     public List<MyPageOrderListDto> getOrders(Long memberSeq, String keyword) {
-        return myPageOrderListQueryRepository.findOrdersByMemberSeq(memberSeq, keyword);
+        return myPageOrderListRepository.findOrdersByMemberSeq(memberSeq, keyword);
     }
 }
