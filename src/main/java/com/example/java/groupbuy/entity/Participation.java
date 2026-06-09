@@ -71,4 +71,13 @@ public class Participation {
     public void cancel() {
         this.status = ParticipationStatus.CANCELLED;
     }
+
+    /**
+     * 승격자 결제 완료: 결제대기(PAYMENT_PENDING) → 참여중(PARTICIPATING)으로 전이.
+     * 승격 시 이미 옵션을 점유(occupied_count)한 상태이므로, 이 전이로 점유 수는 변하지 않는다.
+     * 다만 확정 인원(PARTICIPATING 수)에 비로소 포함된다 → 결제 완료 = 확정 정합성(NFR-003).
+     */
+    public void confirmPayment() {
+        this.status = ParticipationStatus.PARTICIPATING;
+    }
 }
