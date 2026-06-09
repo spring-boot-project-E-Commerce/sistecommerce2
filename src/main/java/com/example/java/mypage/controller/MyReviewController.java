@@ -38,7 +38,6 @@ public class MyReviewController {
 
     /**
      * 리뷰 수정
-     * TODO: 구현 예정
      */
     @PostMapping("/{reviewSeq}/edit")
     public String editReview(
@@ -49,7 +48,16 @@ public class MyReviewController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             RedirectAttributes redirectAttributes) {
 
-        // TODO: 구현 예정
+        try {
+            myReviewService.updateReview(reviewSeq, productSeq, userDetails.getMemberSeq(), rating, content);
+            redirectAttributes.addFlashAttribute("successMsg", "리뷰가 수정되었습니다.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+        } catch (Exception e) {
+            log.error("리뷰 수정 오류", e);
+            redirectAttributes.addFlashAttribute("errorMsg", "수정 중 오류가 발생했습니다.");
+        }
+
         return "redirect:/mypage/reviews";
     }
 
