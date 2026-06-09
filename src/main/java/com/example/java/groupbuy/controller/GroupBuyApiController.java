@@ -74,6 +74,24 @@ public class GroupBuyApiController {
         // 결과를 JSON 본문으로 반환 → "PARTICIPATED" 또는 "QUEUED"
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * 공구 참여 취소.
+     * 예) POST /api/group-buys/7/cancel  → "7번 공구 내 참여를 취소"
+     *
+     * 1인 1상품이라 공구 + 로그인 회원이면 취소 대상 참여가 유일하게 특정되므로, optionSeq는 받지 않는다.
+     * 취소 → 환불 → 점유 복구 → 같은 옵션 대기열 FIFO 승격까지 서비스가 한 트랜잭션으로 처리한다.
+     */
+    @PostMapping("/{seq}/cancel")
+    public ResponseEntity<Void> cancel(
+            @PathVariable(name = "seq") Long seq,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        groupBuyService.cancel(seq, user.getMemberSeq());
+        return ResponseEntity.ok().build();
+    }
 }
 
 /*

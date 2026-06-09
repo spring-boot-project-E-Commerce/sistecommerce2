@@ -57,6 +57,11 @@ public class GroupBuyService {
     private static final List<ParticipationStatus> ACTIVE_PARTICIPATION_STATUSES =
             List.of(ParticipationStatus.PARTICIPATING, ParticipationStatus.PAYMENT_PENDING);
 
+    /** T_lock: 마감 이 시간 전부터는 취소 불가 (현재 24h). */
+    private static final long CANCEL_LOCK_HOURS = 24;
+    /** T_pay: 승격자의 결제 제한시간 (현재 24h). 불변조건 T_lock >= T_pay 를 지켜야 함. */
+    private static final long PROMOTION_PAY_HOURS = 24;
+
     /**
      * 공구 등록 (관리자).
      * - 옵션별 발주수량(order_qty)의 합으로 max_count 자동 계산
@@ -219,6 +224,90 @@ public class GroupBuyService {
                 .build());
 
         return ParticipateResult.PARTICIPATED;
+    }
+
+    /**
+     * 공구 참여 취소 (정규 참여자) + 점유 복구 + 같은 옵션 대기열 FIFO 승격.
+     *
+     * 한 트랜잭션으로 "취소 → 환불 → 점유 복구 → 승격"을 묶는다 (NFR-005 신뢰성).
+     *
+     * 흐름:
+     *  1) 취소 대상(PARTICIPATING) 참여 조회 → 없으면 거부. 옵션 seq도 여기서 얻는다.
+     *  2) 옵션 행 비관적 락 → 같은 옵션의 참여/취소/승격을 직렬화 (NFR-001)
+     *  3) 락 획득 후 참여 상태 재확인(refresh) → 이미 CANCELLED면 환불 없이 종료 (멱등성, NFR-004)
+     *  4) T_lock 검증: 마감 24h 전부터는 취소 불가
+     *  5) 참여 CANCELLED + 환불
+     *  6) 점유 복구(release): 이 자리를 비운다
+     *  7) 같은 옵션 대기열 FIFO 1명 승격 (있으면): occupy + 대기열 행 삭제 + PAYMENT_PENDING participation 생성
+     *
+     * @param groupBuySeq 취소할 공구 seq
+     * @param memberSeq   취소 요청 회원 seq
+     */
+    @Transactional
+    public void cancel(Long groupBuySeq, Long memberSeq) {
+        // 1) 취소 대상(정규 참여) 조회. 옵션 seq를 얻어 다음 단계에서 그 행을 잠근다.
+        Participation participation = participationRepository
+                .findFirstByGroupBuySeqAndMemberSeqAndStatus(
+                        groupBuySeq, memberSeq, ParticipationStatus.PARTICIPATING)
+                .orElseThrow(() -> new IllegalStateException("취소할 참여가 없습니다."));
+
+        // 2) 옵션 행 비관적 락 (참여 때와 같은 행을 잠가 점유 증감 경쟁을 직렬화)
+        GroupBuyOptions option = groupBuyOptionsRepository
+                .findBySeqForUpdate(participation.getGroupBuyOptions().getSeq())
+                .orElseThrow(() -> new IllegalStateException("옵션을 찾을 수 없습니다."));
+
+        // 3) 멱등성(NFR-004): 동시에 들어온 중복 취소 중 먼저 온 요청이 락 안에서 CANCELLED로 바꾸고 commit한다.
+        //    락을 이어받은 두 번째 요청은 여기서 최신 상태를 다시 읽어, 이미 취소됐으면 환불 없이 종료한다.
+        entityManager.refresh(participation);
+        if (participation.getStatus() != ParticipationStatus.PARTICIPATING) {
+            return; // 이미 취소 처리됨 → 환불 중복 방지
+        }
+
+        GroupBuy groupBuy = option.getGroupBuy();
+        LocalDateTime now = LocalDateTime.now();
+
+        // 4) T_lock 검증: 마감 CANCEL_LOCK_HOURS(24h) 전부터는 취소 불가.
+        //    이 구간 이후 취소를 허용하면 승격자 결제기한(min(now+24h, 마감))이 사실상 마감에 몰려
+        //    마감 정합성이 흔들린다 → 불변조건 T_lock >= T_pay 를 시간 정책으로 보장.
+        if (!now.isBefore(groupBuy.getEndAt().minusHours(CANCEL_LOCK_HOURS))) {
+            throw new IllegalStateException("마감 " + CANCEL_LOCK_HOURS + "시간 전부터는 취소할 수 없습니다.");
+        }
+
+        // 5) 취소 확정 + 환불 (위 상태검사로 환불은 1회만 보장됨)
+        participation.cancel(); // status → CANCELLED (변경감지로 UPDATE)
+        paymentPort.cancel(memberSeq, groupBuy.getFinalPrice());
+
+        // 6) 점유 복구: 이 자리를 비운다 (occupied_count -1)
+        option.release();
+
+        // 7) 같은 옵션 대기열 FIFO(created_at 최소) 1명 자동 승격 (NFR-002 공정성)
+        waitingQueueRepository.findFirstByGroupBuyOptionsOrderByCreatedAtAsc(option)
+                .ifPresent(next -> {
+                    // 방금 release로 한 자리 났으므로 occupy는 성공한다.
+                    // (release -1 → occupy +1 = 순증감 0: 빈자리를 승격자가 그대로 이어받음)
+                    option.occupy();
+
+                    // 대기 이탈 = 행 삭제 (waiting_queue엔 status 컬럼이 없다)
+                    waitingQueueRepository.delete(next);
+
+                    // 승격자는 아직 결제 전이므로 PAYMENT_PENDING(결제대기)으로 INSERT.
+                    // 이 시점엔 orders/payment를 만들지 않는다 — 승격자가 실제 결제할 때 한 트랜잭션으로 생성.
+                    // 결제기한 = min(now + T_pay, 마감) : 마감을 절대 넘기지 않게 잘라준다(불변조건).
+                    LocalDateTime deadline = now.plusHours(PROMOTION_PAY_HOURS);
+                    if (deadline.isAfter(groupBuy.getEndAt())) {
+                        deadline = groupBuy.getEndAt();
+                    }
+
+                    participationRepository.save(Participation.builder()
+                            .groupBuy(groupBuy)
+                            .groupBuyOptions(option)
+                            .memberSeq(next.getMemberSeq())
+                            .status(ParticipationStatus.PAYMENT_PENDING)
+                            .paymentDeadline(deadline)  // 승격자 결제 제한시각
+                            .promotedAt(now)            // 승격된 시각
+                            .createdAt(now)
+                            .build());
+                });
     }
 
     /** 공구 목록 조회. */
