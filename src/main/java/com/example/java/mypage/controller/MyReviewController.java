@@ -63,7 +63,6 @@ public class MyReviewController {
 
     /**
      * 리뷰 삭제
-     * TODO: 구현 예정
      */
     @PostMapping("/{reviewSeq}/delete")
     public String deleteReview(
@@ -72,7 +71,16 @@ public class MyReviewController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             RedirectAttributes redirectAttributes) {
 
-        // TODO: 구현 예정
+        try {
+            myReviewService.deleteReview(reviewSeq, productSeq, userDetails.getMemberSeq());
+            redirectAttributes.addFlashAttribute("successMsg", "리뷰가 삭제되었습니다.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+        } catch (Exception e) {
+            log.error("리뷰 삭제 오류", e);
+            redirectAttributes.addFlashAttribute("errorMsg", "삭제 중 오류가 발생했습니다.");
+        }
+
         return "redirect:/mypage/reviews";
     }
 }
