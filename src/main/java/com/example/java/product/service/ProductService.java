@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.java.product.dto.CategoryDto;
 import com.example.java.product.dto.ProductDto;
 import com.example.java.product.dto.ProductPageResponseDto;
 import com.example.java.product.entity.Product;
@@ -39,6 +40,9 @@ public class ProductService {
 
         상품 목록 조회 시
         선택한 카테고리의 하위 카테고리 번호 목록을 가져오기 위해 사용합니다.
+
+        상품 등록 화면에서
+        대분류 / 중분류 / 소분류 카테고리 목록을 가져올 때도 사용합니다.
     */
     private final CategoryService categoryService;
 
@@ -75,13 +79,14 @@ public class ProductService {
         2-1. 상품 상세 조회
 
         처리 순서:
-        1. 상품 엔티티 조회
-        2. 접근 불가 상품 검증
-        3. 조회수 증가
-        4. DTO 변환
-        5. 이미지 목록 조회
-        6. 옵션 목록 조회
-        7. 로그인 회원이 있으면 찜 여부 확인
+        1. 상품 리뷰 통계 갱신
+        2. 상품 엔티티 조회
+        3. 접근 불가 상품 검증
+        4. 조회수 증가
+        5. DTO 변환
+        6. 이미지 목록 조회
+        7. 옵션 목록 조회
+        8. 로그인 회원이 있으면 찜 여부 확인
     */
     @Transactional
     public ProductDto getProductDetail(Long seq, Long memberSeq) {
@@ -329,6 +334,24 @@ public class ProductService {
         );
 
         return productPage.map(this::convertToDtoWithDetails);
+    }
+
+
+    /*
+        상품 등록 화면용 전체 카테고리 목록 조회
+
+        category 테이블 구조:
+        - seq
+        - category_name
+        - depth_level
+        - parent_seq
+
+        화면에서는 이 목록을 이용해서
+        대분류 → 중분류 → 소분류 순서로 선택합니다.
+    */
+    public List<CategoryDto> getAllCategories() {
+
+        return categoryService.getAllCategories();
     }
 
 

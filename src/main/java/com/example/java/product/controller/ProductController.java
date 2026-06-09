@@ -222,63 +222,18 @@ public class ProductController {
 
         model.addAttribute("productDto", new ProductDto());
 
+        /*
+            카테고리 전체 목록
+
+            depthLevel
+            0 = 대분류
+            1 = 중분류
+            2 = 소분류
+        */
+        model.addAttribute("categories", categoryService.getAllCategories());
+
         return "product/register";
     }
-
-
-    /*
-        상품 등록 처리
-
-        접속 주소:
-        POST /product/register
-    */
-    @PostMapping("/register")
-    public String createProduct(ProductDto dto) {
-
-        productService.createProduct(dto);
-
-        return "redirect:/product/list";
-    }
-
-
-    /*
-        상품 수정 폼
-
-        접속 주소:
-        GET /product/edit/{seq}
-
-        수정 화면에서는 조회수가 증가하면 안 되므로
-        getProductWithoutViewCount()를 사용합니다.
-    */
-    @GetMapping("/edit/{seq}")
-    public String editForm(
-            @PathVariable("seq") Long seq,
-            Model model) {
-
-        ProductDto product = productService.getProductWithoutViewCount(seq);
-
-        model.addAttribute("productDto", product);
-
-        return "product/edit";
-    }
-
-
-    /*
-        상품 수정 처리
-
-        접속 주소:
-        POST /product/edit/{seq}
-    */
-    @PostMapping("/edit/{seq}")
-    public String updateProduct(
-            @PathVariable("seq") Long seq,
-            ProductDto dto) {
-
-        productService.updateProduct(seq, dto);
-
-        return "redirect:/product/view/" + seq;
-    }
-
 
     /*
         상품 삭제 처리
@@ -361,4 +316,38 @@ public class ProductController {
 
         return null;
     }
+    
+    /*
+	    판매자 상품 관리 화면
+	
+	    접속 주소:
+	    GET /products/manage
+	*/
+	@GetMapping("/manage")
+	public String manageProducts(Model model) {
+	
+	    /*
+	        나중에 Service에서 판매자 상품 목록을 조회해서 넣으면 됩니다.
+	
+	        예:
+	        List<ProductDto> products = productService.getSellerProductList(...);
+	        model.addAttribute("products", products);
+	    */
+	
+	    model.addAttribute("products", java.util.Collections.emptyList());
+	    model.addAttribute("totalCount", 0);
+	
+	    model.addAttribute("approvalStatus", "ALL");
+	    model.addAttribute("startDate", null);
+	    model.addAttribute("endDate", null);
+	    model.addAttribute("searchType", "productName");
+	    model.addAttribute("keyword", null);
+	
+	    model.addAttribute("page", 1);
+	    model.addAttribute("startPage", 1);
+	    model.addAttribute("endPage", 1);
+	    model.addAttribute("totalPage", 1);
+	
+	    return "product/manage";
+	}
 }

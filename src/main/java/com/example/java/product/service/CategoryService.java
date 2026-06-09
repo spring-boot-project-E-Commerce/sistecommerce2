@@ -105,4 +105,11 @@ public class CategoryService {
         }
         return path;
     }
+    
+    public List<CategoryDto> getAllCategories() {
+        return categoryRepository.findAll()
+                .stream()
+                .map(CategoryDto::from)
+                .toList();
+    }
 }
