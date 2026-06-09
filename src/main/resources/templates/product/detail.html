@@ -745,27 +745,63 @@
 </script>
 
 <script>
-    function addToCart() {
-        const optionsSeq = document.getElementById('optionsSeq').value;
-        const quantity   = document.getElementById('quantity').value;
+	/*
+	    장바구니 담기 버튼 클릭 시 실행됩니다.
 
-        if (!optionsSeq) {
-            alert('옵션을 선택해주세요.');
-            return;
-        }
+	    처리 순서:
+	    1. 옵션 선택 여부 확인
+	    2. 수량 확인
+	    3. POST /api/cart 요청
+	    4. 로그인하지 않은 경우 로그인 페이지로 이동
+	    5. 성공 시 알림 표시
+	*/
+	function addToCart() {
+	    const optionsSeq = document.getElementById('optionsSeq').value;
+	    const quantity = document.getElementById('quantity').value;
 
-        fetch('/api/cart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ optionsSeq: optionsSeq, quantity: quantity })
-        })
-        .then(res => {
-            // 비로그인 처리 추가 필요
-            if (!res.ok) throw new Error();
-            alert('장바구니에 담겼습니다.');
-        })
-        .catch(() => alert('오류가 발생했습니다.'));
-    }
+	    if (!optionsSeq) {
+	        alert('옵션을 선택해주세요.');
+	        return;
+	    }
+
+	    if (!quantity || Number(quantity) < 1) {
+	        alert('수량은 1개 이상이어야 합니다.');
+	        return;
+	    }
+
+	    fetch('/api/cart', {
+	        method: 'POST',
+	        headers: {
+	            'Content-Type': 'application/json'
+	        },
+	        credentials: 'same-origin',
+	        body: JSON.stringify({
+	            optionsSeq: Number(optionsSeq),
+	            quantity: Number(quantity)
+	        })
+	    })
+	    .then(async function (res) {
+
+	        const message = await res.text();
+
+	        if (res.status === 401) {
+	            alert(message || '로그인이 필요합니다.');
+	            location.href = '/member/login';
+	            return;
+	        }
+
+	        if (!res.ok) {
+	            alert(message || '장바구니 담기에 실패했습니다.');
+	            return;
+	        }
+
+	        alert(message || '장바구니에 담겼습니다.');
+	    })
+	    .catch(function (error) {
+	        console.error(error);
+	        alert('오류가 발생했습니다.');
+	    });
+	}
 </script>
 
 </body>
