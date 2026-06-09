@@ -1,16 +1,23 @@
 package com.example.java.mypage.repository;
 
-import static com.example.java.orders.entity.QOrders.orders;
+import static com.example.java.delivery.entity.QDelivery.delivery;
 import static com.example.java.orders.entity.QOrderItem.orderItem;
+import static com.example.java.orders.entity.QOrders.orders;
 import static com.example.java.product.entity.QOptions.options;
 import static com.example.java.product.entity.QProduct.product;
-import static com.example.java.delivery.entity.QDelivery.delivery;
+import static com.example.java.product.entity.QSeller.seller;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Repository;
 
+import com.example.java.mypage.dto.MyPageDeliveryDto;
+import com.example.java.mypage.dto.MyPageOrderItemDto;
 import com.example.java.mypage.dto.MyPageOrderListDto;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
@@ -22,12 +29,15 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class MyPageOrderListRepositoryImpl implements MyPageOrderListRepository {
 
-    private final JPAQueryFactory queryFactory;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
+    private static final String DELIVERY_READY_COMPANY = "\uBC30\uC1A1 \uC900\uBE44\uC911";
+    private static final String TRACKING_PENDING = "\uBC1C\uAE09\uB300\uAE30";
+    private static final String DELIVERY_READY_STATUS = "READY";
+
+    private final JPAQueryFactory queryFactory;
 
     @Override
     public List<MyPageOrderListDto> findOrdersByMemberSeq(Long memberSeq, String keyword) {
-
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(orders.memberSeq.eq(memberSeq));
 
@@ -35,59 +45,186 @@ public class MyPageOrderListRepositoryImpl implements MyPageOrderListRepository 
             builder.and(product.productName.like("%" + keyword.trim() + "%"));
         }
 
-        List<Tuple> results = queryFactory
-                .select(
-                        orders.orderDate,
-                        delivery.status,
-                        product.thumbnailUrl,
-                        orderItem.productName,
-                        orderItem.finalPrice,
-                        orderItem.quantity,
-                        delivery.tracking_number,
-                        product.seq
-                )
+        List<Long> matchedOrderSeqs = queryFactory
+                .select(orders.seq)
+                .distinct()
                 .from(orders)
                 .join(orderItem).on(orders.seq.eq(orderItem.orderSeq))
                 .join(options).on(orderItem.optionsSeq.eq(options.seq))
                 .join(product).on(options.product.seq.eq(product.seq))
-                .leftJoin(delivery).on(orders.seq.eq(delivery.orders.seq))
                 .where(builder)
                 .orderBy(orders.seq.desc())
                 .fetch();
 
-        return results.stream()
-                .map(row -> {
-                    String orderDateStr = "";
-                    if (row.get(orders.orderDate) != null) {
-                        orderDateStr = row.get(orders.orderDate).format(DATE_FORMATTER);
-                    }
+        if (matchedOrderSeqs.isEmpty()) {
+            return new ArrayList<>();
+        }
 
-                    String deliveryStatus = row.get(delivery.status);
-                    if (deliveryStatus == null || deliveryStatus.trim().isEmpty()) {
-                        deliveryStatus = "배송준비중";
-                    }
+        List<Tuple> itemRows = queryFactory
+                .select(
+                        orderItem.orderSeq,
+                        product.seq,
+                        orderItem.productName,
+                        product.thumbnailUrl,
+                        orderItem.finalPrice,
+                        orderItem.quantity,
+                        seller.deliveryCompany.name
+                )
+                .from(orderItem)
+                .join(options).on(orderItem.optionsSeq.eq(options.seq))
+                .join(product).on(options.product.seq.eq(product.seq))
+                .join(seller).on(product.sellerSeq.eq(seller.seq))
+                .where(orderItem.orderSeq.in(matchedOrderSeqs))
+                .fetch();
 
-                    String imageUrl = row.get(product.thumbnailUrl);
-                    if (imageUrl == null || imageUrl.trim().isEmpty()) {
-                        imageUrl = "/images/default-product.png";
-                    }
+        List<Tuple> deliveryRows = queryFactory
+                .select(
+                        delivery.orders.seq,
+                        delivery.deliveryCompany.name,
+                        delivery.status,
+                        delivery.tracking_number,
+                        delivery.completed_at
+                )
+                .from(delivery)
+                .where(delivery.orders.seq.in(matchedOrderSeqs))
+                .fetch();
 
-                    String trackingNum = row.get(delivery.tracking_number);
-                    if (trackingNum == null || trackingNum.trim().isEmpty()) {
-                        trackingNum = "발급대기";
-                    }
+        Map<Long, Map<String, List<MyPageOrderItemDto>>> itemsByOrderAndCompany = groupItemsByOrderAndCompany(itemRows);
+        Map<Long, Map<String, DeliveryInfo>> deliveryInfoByOrderAndCompany = groupDeliveryInfoByOrderAndCompany(deliveryRows);
+        Map<Long, String> dateByOrderSeq = findOrderDates(matchedOrderSeqs);
 
-                    return MyPageOrderListDto.builder()
-                            .orderDate(orderDateStr)
-                            .deliveryStatus(deliveryStatus)
-                            .image(imageUrl)
-                            .name(row.get(orderItem.productName))
-                            .price(row.get(orderItem.finalPrice))
-                            .qty(row.get(orderItem.quantity))
-                            .trackingNumber(trackingNum)
-                            .productSeq(row.get(product.seq))
-                            .build();
-                })
-                .toList();
+        List<MyPageOrderListDto> finalOrders = new ArrayList<>();
+        for (Long orderSeq : matchedOrderSeqs) {
+            List<MyPageDeliveryDto> deliveryGroups = buildDeliveryCompanyGroups(
+                    itemsByOrderAndCompany.get(orderSeq),
+                    deliveryInfoByOrderAndCompany.get(orderSeq)
+            );
+
+            boolean allDelivered = !deliveryGroups.isEmpty() && deliveryGroups.stream()
+                    .allMatch(group -> "DELIVERED".equals(group.getDeliveryStatus()));
+
+            finalOrders.add(MyPageOrderListDto.builder()
+                    .orderSeq(orderSeq)
+                    .orderDate(dateByOrderSeq.get(orderSeq))
+                    .deliveries(deliveryGroups)
+                    .allDelivered(allDelivered)
+                    .build());
+        }
+
+        return finalOrders;
+    }
+
+    private Map<Long, Map<String, List<MyPageOrderItemDto>>> groupItemsByOrderAndCompany(List<Tuple> itemRows) {
+        Map<Long, Map<String, List<MyPageOrderItemDto>>> groupedItems = new LinkedHashMap<>();
+
+        for (Tuple row : itemRows) {
+            Long orderSeq = row.get(orderItem.orderSeq);
+            String companyName = valueOrDefault(row.get(seller.deliveryCompany.name), DELIVERY_READY_COMPANY);
+            String imageUrl = valueOrDefault(row.get(product.thumbnailUrl), "/images/default-product.png");
+
+            MyPageOrderItemDto itemDto = MyPageOrderItemDto.builder()
+                    .productSeq(row.get(product.seq))
+                    .name(row.get(orderItem.productName))
+                    .image(imageUrl)
+                    .price(row.get(orderItem.finalPrice))
+                    .qty(row.get(orderItem.quantity))
+                    .build();
+
+            groupedItems
+                    .computeIfAbsent(orderSeq, key -> new LinkedHashMap<>())
+                    .computeIfAbsent(companyName, key -> new ArrayList<>())
+                    .add(itemDto);
+        }
+
+        return groupedItems;
+    }
+
+    private Map<Long, Map<String, DeliveryInfo>> groupDeliveryInfoByOrderAndCompany(List<Tuple> deliveryRows) {
+        Map<Long, Map<String, DeliveryInfo>> groupedDeliveryInfo = new HashMap<>();
+
+        for (Tuple row : deliveryRows) {
+            Long orderSeq = row.get(delivery.orders.seq);
+            String companyName = valueOrDefault(row.get(delivery.deliveryCompany.name), DELIVERY_READY_COMPANY);
+
+            groupedDeliveryInfo
+                    .computeIfAbsent(orderSeq, key -> new HashMap<>())
+                    .put(companyName, new DeliveryInfo(
+                            valueOrDefault(row.get(delivery.status), DELIVERY_READY_STATUS),
+                            valueOrDefault(row.get(delivery.tracking_number), TRACKING_PENDING),
+                            formatDate(row.get(delivery.completed_at))
+                    ));
+        }
+
+        return groupedDeliveryInfo;
+    }
+
+    private Map<Long, String> findOrderDates(List<Long> orderSeqs) {
+        List<Tuple> orderDates = queryFactory
+                .select(orders.seq, orders.orderDate)
+                .from(orders)
+                .where(orders.seq.in(orderSeqs))
+                .fetch();
+
+        Map<Long, String> dateByOrderSeq = new HashMap<>();
+        for (Tuple row : orderDates) {
+            String date = "";
+            if (row.get(orders.orderDate) != null) {
+                date = row.get(orders.orderDate).format(DATE_FORMATTER);
+            }
+            dateByOrderSeq.put(row.get(orders.seq), date);
+        }
+        return dateByOrderSeq;
+    }
+
+    private List<MyPageDeliveryDto> buildDeliveryCompanyGroups(
+            Map<String, List<MyPageOrderItemDto>> companyItems,
+            Map<String, DeliveryInfo> deliveryInfoByCompany
+    ) {
+        List<MyPageDeliveryDto> deliveryGroups = new ArrayList<>();
+
+        if (companyItems == null || companyItems.isEmpty()) {
+            deliveryGroups.add(MyPageDeliveryDto.builder()
+                    .companyName(DELIVERY_READY_COMPANY)
+                    .deliveryStatus(DELIVERY_READY_STATUS)
+                    .trackingNumber(TRACKING_PENDING)
+                    .completedAt("")
+                    .items(new ArrayList<>())
+                    .build());
+            return deliveryGroups;
+        }
+
+        Map<String, DeliveryInfo> safeDeliveryInfo =
+                deliveryInfoByCompany != null ? deliveryInfoByCompany : new HashMap<>();
+
+        for (Map.Entry<String, List<MyPageOrderItemDto>> entry : companyItems.entrySet()) {
+            DeliveryInfo info = safeDeliveryInfo.get(entry.getKey());
+
+            deliveryGroups.add(MyPageDeliveryDto.builder()
+                    .companyName(entry.getKey())
+                    .deliveryStatus(info != null ? info.status() : DELIVERY_READY_STATUS)
+                    .trackingNumber(info != null ? info.trackingNumber() : TRACKING_PENDING)
+                    .completedAt(info != null ? info.completedAt() : "")
+                    .items(entry.getValue())
+                    .build());
+        }
+
+        return deliveryGroups;
+    }
+
+    private String valueOrDefault(String value, String defaultValue) {
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        return value;
+    }
+
+    private String formatDate(java.time.LocalDateTime dateTime) {
+        if (dateTime == null) {
+            return "";
+        }
+        return dateTime.format(DATE_FORMATTER);
+    }
+
+    private record DeliveryInfo(String status, String trackingNumber, String completedAt) {
     }
 }
