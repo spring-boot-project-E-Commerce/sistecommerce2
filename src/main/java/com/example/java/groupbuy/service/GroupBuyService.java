@@ -45,8 +45,10 @@ public class GroupBuyService {
     private final WaitingQueueRepository waitingQueueRepository;
     private final GroupBuyPaymentPort paymentPort;
 
-    // ProductRepository가 dev에서 class(EntityManager 직접 구현)로 바뀌어 JpaRepository 메서드가 없음.
-    // 등록 시 Product FK만 세팅하면 되므로 EntityManager.getReference로 프록시 참조를 얻는다.
+    // ProductRepository가 dev에서 class(EntityManager 직접 구현)로 바뀌어 
+    // JpaRepository 메서드가 없음.
+    // 등록 시 Product FK만 세팅하면 되므로 
+    // EntityManager.getReference로 프록시 참조를 얻는다.
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -256,8 +258,10 @@ public class GroupBuyService {
                 .findBySeqForUpdate(participation.getGroupBuyOptions().getSeq())
                 .orElseThrow(() -> new IllegalStateException("옵션을 찾을 수 없습니다."));
 
-        // 3) 멱등성(NFR-004): 동시에 들어온 중복 취소 중 먼저 온 요청이 락 안에서 CANCELLED로 바꾸고 commit한다.
-        //    락을 이어받은 두 번째 요청은 여기서 최신 상태를 다시 읽어, 이미 취소됐으면 환불 없이 종료한다.
+        // 3) 멱등성(NFR-004): 동시에 들어온 중복 취소 중 
+        //    먼저 온 요청이 락 안에서 CANCELLED로 바꾸고 commit한다.
+        //    락을 이어받은 두 번째 요청은 여기서 최신 상태를 다시 읽어, 
+        //    이미 취소됐으면 환불 없이 종료한다.
         entityManager.refresh(participation);
         if (participation.getStatus() != ParticipationStatus.PARTICIPATING) {
             return; // 이미 취소 처리됨 → 환불 중복 방지
@@ -267,10 +271,11 @@ public class GroupBuyService {
         LocalDateTime now = LocalDateTime.now();
 
         // 4) T_lock 검증: 마감 CANCEL_LOCK_HOURS(24h) 전부터는 취소 불가.
-        //    이 구간 이후 취소를 허용하면 승격자 결제기한(min(now+24h, 마감))이 사실상 마감에 몰려
+        //    이 구간 이후 취소를 허용하면 
+        //    승격자 결제기한(min(now+24h, 마감))이 사실상 마감에 몰려
         //    마감 정합성이 흔들린다 → 불변조건 T_lock >= T_pay 를 시간 정책으로 보장.
         if (!now.isBefore(groupBuy.getEndAt().minusHours(CANCEL_LOCK_HOURS))) {
-            throw new IllegalStateException("마감 " + CANCEL_LOCK_HOURS + "시간 전부터는 취소할 수 없습니다.");
+            throw new IllegalStateException("안내: 마감 " + CANCEL_LOCK_HOURS + "시간 이내에는 취소할 수 없습니다.");
         }
 
         // 5) 취소 확정 + 환불 (위 상태검사로 환불은 1회만 보장됨)
@@ -291,8 +296,10 @@ public class GroupBuyService {
                     waitingQueueRepository.delete(next);
 
                     // 승격자는 아직 결제 전이므로 PAYMENT_PENDING(결제대기)으로 INSERT.
-                    // 이 시점엔 orders/payment를 만들지 않는다 — 승격자가 실제 결제할 때 한 트랜잭션으로 생성.
-                    // 결제기한 = min(now + T_pay, 마감) : 마감을 절대 넘기지 않게 잘라준다(불변조건).
+                    // 이 시점엔 orders/payment를 만들지 않는다 
+                    // -> 승격자가 실제 결제할 때 한 트랜잭션으로 생성.
+                    // 결제기한 = min(now + T_pay, 마감) : 
+                    // 마감을 절대 넘기지 않게 잘라준다(불변조건).
                     LocalDateTime deadline = now.plusHours(PROMOTION_PAY_HOURS);
                     if (deadline.isAfter(groupBuy.getEndAt())) {
                         deadline = groupBuy.getEndAt();
@@ -308,6 +315,62 @@ public class GroupBuyService {
                             .createdAt(now)
                             .build());
                 });
+    }
+
+    /**
+     * 승격자 결제 (대기열에서 승격된 결제대기자가 기한 내 직접 결제).
+     *
+     * 승격 시 이미 옵션을 점유(occupied_count +1)했으므로, 이 메서드는 점유 수를 바꾸지 않고
+     * 상태만 PAYMENT_PENDING → PARTICIPATING 으로 "확정"시킨다.
+     * 결제가 완료돼야 비로소 확정 인원(PARTICIPATING 수)에 포함된다 (NFR-003 정합성).
+     *
+     * 흐름:
+     *  1) 결제대기(PAYMENT_PENDING) 참여 조회 → 없으면 거부
+     *  2) 옵션 행 락 → 만료 처리(스케줄러)·취소와 직렬화
+     *  3) refresh로 상태 재확인 → 그 사이 만료(FAILED)되거나 이미 결제됐으면 거부 (중복 결제 방지)
+     *  4) 공구 ONGOING + 결제기한(now ≤ payment_deadline) 검증
+     *  5) 결제(스텁) — 실패 시 예외로 롤백
+     *  6) 상태 전이 PAYMENT_PENDING → PARTICIPATING
+     *
+     * @param groupBuySeq 결제할 공구 seq
+     * @param memberSeq   승격된 회원 seq
+     */
+    @Transactional
+    public void confirmPromotedPayment(Long groupBuySeq, Long memberSeq) {
+        // 1) 결제대기(승격) 참여 조회. 옵션 seq를 얻어 다음 단계에서 그 행을 잠근다.
+        Participation participation = participationRepository
+                .findFirstByGroupBuySeqAndMemberSeqAndStatus(
+                        groupBuySeq, memberSeq, ParticipationStatus.PAYMENT_PENDING)
+                .orElseThrow(() -> new IllegalStateException("결제 대기 중인 참여가 없습니다."));
+
+        // 2) 옵션 행 비관적 락 (만료 처리/취소가 같은 행을 건드리므로 직렬화)
+        GroupBuyOptions option = groupBuyOptionsRepository
+                .findBySeqForUpdate(participation.getGroupBuyOptions().getSeq())
+                .orElseThrow(() -> new IllegalStateException("옵션을 찾을 수 없습니다."));
+
+        // 3) 락 획득 후 상태 재확인: 락 대기 중에 만료(FAILED) 처리되거나 이미 결제됐을 수 있다.
+        //    PAYMENT_PENDING이 아니면 더 진행하지 않는다 (중복 결제·만료자 결제 방지).
+        entityManager.refresh(participation);
+        if (participation.getStatus() != ParticipationStatus.PAYMENT_PENDING) {
+            throw new IllegalStateException("이미 처리되었거나 결제 기한이 만료된 참여입니다.");
+        }
+
+        GroupBuy groupBuy = option.getGroupBuy();
+        LocalDateTime now = LocalDateTime.now();
+
+        // 4) 공구 진행 상태 + 결제기한 검증 (만료 자동처리(GB-023) 전이라 여기서도 직접 방어)
+        if (groupBuy.getStatus() != GroupBuyStatus.ONGOING) {
+            throw new IllegalStateException("진행 중인 공동구매가 아닙니다.");
+        }
+        if (participation.getPaymentDeadline() != null && now.isAfter(participation.getPaymentDeadline())) {
+            throw new IllegalStateException("결제 기한이 지났습니다.");
+        }
+
+        // 5) 결제 (스텁: 항상 성공). 실패 시 예외 → 트랜잭션 롤백
+        paymentPort.pay(memberSeq, groupBuy.getFinalPrice());
+
+        // 6) 확정: PAYMENT_PENDING → PARTICIPATING. occupied_count는 이미 점유돼 있어 변동 없음.
+        participation.confirmPayment();
     }
 
     /** 공구 목록 조회. */
