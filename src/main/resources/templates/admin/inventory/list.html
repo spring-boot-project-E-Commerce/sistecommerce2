@@ -46,50 +46,82 @@
 
                 <div class="flex gap-2">
                     <label class="filter-btn">
-                        <input type="radio" name="saleStatus" value="" checked>
-                        전체
+                        <input type="radio" name="saleStatus" value=""
+						       th:checked="${search.saleStatus == ''}">
+						전체
                     </label>
 
                     <label class="filter-btn">
-                        <input type="radio" name="saleStatus" value="ON_SALE">
-                        판매중
+                        <input type="radio" name="saleStatus" value="ON_SALE"
+						       th:checked="${search.saleStatus == 'ON_SALE'}">
+						판매중
                     </label>
 
                     <label class="filter-btn">
-                        <input type="radio" name="saleStatus" value="SOLD_OUT">
-                        품절
+                        <input type="radio" name="saleStatus" value="SOLD_OUT"
+						       th:checked="${search.saleStatus == 'SOLD_OUT'}">
+						품절
                     </label>
 
                     <label class="filter-btn">
-                        <input type="radio" name="saleStatus" value="STOPPED">
-                        판매중지
+                        <input type="radio" name="saleStatus" value="STOPPED"
+						       th:checked="${search.saleStatus == 'STOPPED'}">
+						판매중지
+                    </label>
+                </div>
+            </div>
+            
+            <!-- 상품 재고 -->
+            <div class="flex items-center gap-4">
+                <span class="text-label w-24">상품 재고</span>
+                <div class="flex gap-2">
+                    <label class="filter-btn">
+                        <input type="radio" name="stockType" value=""
+						       th:checked="${search.stockType == ''}">
+						전체
+                    </label>
+                    <label class="filter-btn">
+                        <input type="radio" name="stockType" value="UNDER_SAFE"
+						       th:checked="${search.stockType == 'UNDER_SAFE'}">
+						안전재고 이하
                     </label>
                 </div>
             </div>
 
-            <!-- 가격 -->
+            <!-- 상품 가격 -->
             <div class="flex items-center gap-4">
-                <span class="text-label w-24">판매가</span>
+                <span class="text-label w-24">상품 가격</span>
 
                 <div class="flex items-center gap-2">
-                    <input type="number" name="priceFrom" class="form-input w-32">
+                    <input type="number"
+				       name="priceFrom"
+				       th:value="${search.priceFrom}"
+				       class="form-input w-32">
                     <span class="text-label">원 이상 ~</span>
-                    <input type="number" name="priceTo" class="form-input w-32">
+                    <input type="number"
+				       name="priceTo"
+				       th:value="${search.priceTo}"
+				       class="form-input w-32">
                     <span class="text-label">원 이하</span>
                 </div>
             </div>
-
-            <!-- 재고 -->
-            <div class="flex items-center gap-4">
-                <span class="text-label w-24">현재 재고</span>
-
-                <div class="flex items-center gap-2">
-                    <input type="number" name="stockFrom" class="form-input w-32">
-                    <span class="text-label">개 이상 ~</span>
-                    <input type="number" name="stockTo" class="form-input w-32">
-                    <span class="text-label">개 이하</span>
-                </div>
-            </div>
+            
+            <!-- 기간 검색 (등록일) -->
+	        <div class="flex items-center gap-4">
+	            <span class="text-label w-24">기간 검색</span>
+	
+	            <div class="flex items-center gap-2">
+	                <input type="datetime-local"
+				       name="createdDateFrom"
+				       th:value="${search.createdDateFrom}"
+				       class="form-input">
+	                <span class="text-label">~</span>
+	                <input type="datetime-local"
+				       name="createdDateTo"
+				       th:value="${search.createdDateTo}"
+				       class="form-input">
+	            </div>
+	        </div>
 
             <!-- 검색 -->
             <div class="flex items-center gap-4">
@@ -98,9 +130,10 @@
                 <div class="flex gap-2 w-full">
 
                     <input type="text"
-                           name="keyword"
-                           class="form-input w-[28rem]"
-                           placeholder="상품명 또는 옵션명 검색">
+				       name="keyword"
+				       th:value="${search.keyword}"
+				       class="form-input w-[28rem]"
+				       placeholder="상품명 검색">
 
                     <button type="submit"
                             class="btn btn-primary px-12 py-2 text-base">
