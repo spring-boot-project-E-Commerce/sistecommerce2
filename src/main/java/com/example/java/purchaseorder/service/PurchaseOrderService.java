@@ -1,21 +1,31 @@
 package com.example.java.purchaseorder.service;
 
 import java.time.LocalDate;
+
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.java.adminpayment.service.AdminPaymentService;
 import com.example.java.groupbuy.entity.GroupBuyOptions;
 import com.example.java.groupbuy.repository.GroupBuyOptionsRepository;
 import com.example.java.product.entity.Options;
 import com.example.java.product.service.OptionsService;
 import com.example.java.purchaseorder.dto.PurchaseOrderCreateDTO;
+import com.example.java.purchaseorder.dto.PurchaseOrderListDTO;
+import com.example.java.purchaseorder.dto.PurchaseOrderSearchDTO;
 import com.example.java.purchaseorder.entity.PurchaseOrder;
 import com.example.java.purchaseorder.enums.PurchaseOrderStatus;
 import com.example.java.purchaseorder.enums.PurchaseOrderType;
+import com.example.java.purchaseorder.repository.PurchaseOrderQueryDslRepository;
 import com.example.java.purchaseorder.repository.PurchaseOrderRepository;
+import com.example.java.stockhistory.enums.StockHistorySourceType;
+import com.example.java.stockhistory.service.StockHistoryService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,8 +35,11 @@ import lombok.RequiredArgsConstructor;
 public class PurchaseOrderService {
 
 	private final PurchaseOrderRepository purchaseOrderRepository;
+	private final PurchaseOrderQueryDslRepository queryDslRepository;
 	private final OptionsService optionsService;
 	private final GroupBuyOptionsRepository groupBuyOptionsRepository;
+	private final AdminPaymentService adminPaymentService;
+	private final StockHistoryService stockHistoryService;
 	
 	@Transactional(readOnly = true)
 	public PurchaseOrder findById(Long seq) {
@@ -84,6 +97,33 @@ public class PurchaseOrderService {
 		return purchaseOrderRepository.findAllWithOptions();
 	}
 	
+	@Transactional(readOnly = true)
+	public Slice<PurchaseOrderListDTO> getList(PurchaseOrderSearchDTO search, Pageable pageable) {
+		
+		List<PurchaseOrder> contents =
+	            queryDslRepository
+	                    .findAllWithOptionsAndProduct(search, pageable);
+
+	    boolean hasNext =
+	            contents.size() > pageable.getPageSize();
+
+	    if (hasNext) {
+	        contents.remove(contents.size() - 1);
+	    }
+
+	    List<PurchaseOrderListDTO> dtoList =
+	            contents.stream()
+	                    .map(PurchaseOrderListDTO::from)
+	                    .toList();
+
+	    return new SliceImpl<>(
+	            dtoList,
+	            pageable,
+	            hasNext
+	    );
+	}
+	
+	
 	
 	
 	
@@ -92,11 +132,16 @@ public class PurchaseOrderService {
 	    // 재고 증가
 	    optionsService.increaseStock(order.getOptions().getSeq(), order.getQuantity());
 	    
-	    // TODO 재고 이력 생성
-	    // stockHistoryRepository.createHistory(order);
+	    // 재고 이력 생성
+	    stockHistoryService.createInStockHistory(
+	    		order.getOptions(), order.getQuantity(),
+	    		StockHistorySourceType.발주, "입고완료");
 	    
 	    // 입고일(receivedDate) 저장
 	    order.changeReceivedDate(LocalDate.now());
+	    
+	    // 대금 정보 생성
+	    adminPaymentService.createPurchasePayment(order);
 	}
 	private void defectiveOrder(PurchaseOrder order) {
 	    order.changeStatus(PurchaseOrderStatus.물품불량);
@@ -113,13 +158,18 @@ public class PurchaseOrderService {
 	private void delayedCompleteOrder(PurchaseOrder order) {
 	    order.changeStatus(PurchaseOrderStatus.지연입고);
 	    // 재고 증가
-	    optionsService.decreaseStock(order.getOptions().getSeq(), order.getQuantity());
+	    optionsService.increaseStock(order.getOptions().getSeq(), order.getQuantity());
 	    
-	    // TODO 재고 이력 생성
-	    // stockHistoryRepository.createHistory(order);
+	    // 재고 이력 생성
+	    stockHistoryService.createInStockHistory(
+	    		order.getOptions(), order.getQuantity(),
+	    		StockHistorySourceType.발주, "입고완료");
 	    
 	    // 입고일(receivedDate) 저장
 	    order.changeReceivedDate(LocalDate.now());
+	    
+	    // 대금 정보 생성
+	    adminPaymentService.createPurchasePayment(order);
 	}
 	
 	private PurchaseOrder createReOrder(PurchaseOrder originalOrder) {
