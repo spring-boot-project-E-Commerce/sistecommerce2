@@ -39,11 +39,12 @@ public class MyReviewService {
 
     /**
      * 리뷰 삭제 (soft delete)
-     * TODO: 구현 예정
      */
     @Transactional
     public void deleteReview(Long reviewSeq, Long productSeq, Long memberSeq) {
-        // TODO: 구현 예정
-        throw new UnsupportedOperationException("deleteReview 미구현");
+        int deleted = reviewRepository.deleteReview(reviewSeq, productSeq, memberSeq);
+        if (deleted == 0) {
+            throw new IllegalArgumentException("삭제할 수 없는 리뷰입니다.");
+        }
     }
 }
