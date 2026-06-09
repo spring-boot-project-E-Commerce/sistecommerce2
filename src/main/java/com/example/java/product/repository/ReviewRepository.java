@@ -660,4 +660,17 @@ public class ReviewRepository {
 
         namedParameterJdbcTemplate.update(sql, params);
     }
+
+    /*
+        내가 쓴 리뷰 목록 조회 (마이페이지용)
+
+        회원 번호로 본인이 작성한 NORMAL 상태의 리뷰를 최신순으로 조회합니다.
+        상품명과 대표 이미지를 함께 가져옵니다.
+
+        TODO: 구현 예정
+    */
+    public List<com.example.java.mypage.dto.MyReviewDto> findMyReviews(Long memberSeq) {
+        // TODO: 구현 예정
+        throw new UnsupportedOperationException("findMyReviews 미구현");
+    }
 }
