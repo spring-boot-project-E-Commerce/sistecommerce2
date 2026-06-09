@@ -12,15 +12,18 @@ import com.example.java.groupbuy.dto.GroupBuyDto;
 import com.example.java.groupbuy.dto.GroupBuyOptionView;
 import com.example.java.groupbuy.dto.GroupBuyOptionsDto;
 import com.example.java.groupbuy.dto.GroupBuySummaryResponse;
+import com.example.java.groupbuy.dto.ParticipateResult;
 import com.example.java.groupbuy.entity.GroupBuy;
 import com.example.java.groupbuy.entity.GroupBuyOptions;
 import com.example.java.groupbuy.entity.GroupBuyStatus;
 import com.example.java.groupbuy.entity.Participation;
 import com.example.java.groupbuy.entity.ParticipationStatus;
+import com.example.java.groupbuy.entity.WaitingQueue;
 import com.example.java.groupbuy.payment.GroupBuyPaymentPort;
 import com.example.java.groupbuy.repository.GroupBuyOptionsRepository;
 import com.example.java.groupbuy.repository.GroupBuyRepository;
 import com.example.java.groupbuy.repository.ParticipationRepository;
+import com.example.java.groupbuy.repository.WaitingQueueRepository;
 import com.example.java.product.entity.Product;
 import com.example.java.product.entity.ProductImage;
 import com.example.java.product.repository.OptionsRepository;
@@ -39,6 +42,7 @@ public class GroupBuyService {
     private final OptionsRepository optionsRepository;
     private final ProductImageRepository productImageRepository;
     private final ParticipationRepository participationRepository;
+    private final WaitingQueueRepository waitingQueueRepository;
     private final GroupBuyPaymentPort paymentPort;
 
     // ProductRepository가 dev에서 class(EntityManager 직접 구현)로 바뀌어 JpaRepository 메서드가 없음.
@@ -129,24 +133,32 @@ public class GroupBuyService {
     }
 
     /**
-     * 공구 정규 참여 (1단계: 성공 경로).
+     * 공구 참여 신청 (2단계: 정규 참여 + 대기열 등록 분기).
+     *
+     * 선택한 옵션의 매진 여부에 따라 결과가 갈린다:
+     *  - 정원이 남으면 → 정규 참여(점유 +1, 결제, participation INSERT) → {@link ParticipateResult#PARTICIPATED}
+     *  - 매진이면     → 대기열(waiting_queue)에 등록(결제·점유 없음)      → {@link ParticipateResult#QUEUED}
      *
      * 흐름:
      *  1) findBySeqForUpdate 로 옵션 행에 비관적 쓰기 락(SELECT ... FOR UPDATE) → 같은 옵션 경쟁을 줄세움
      *  2) 옵션-공구 일치 + 공구 진행상태(ONGOING)/기간 검증
-     *  3) 중복참여 검사 (진행 중 참여가 있으면 거부, 취소 후 재참여는 허용)
-     *  4) occupy() 로 점유(+1) — 매진이면 예외 (대기열 승격은 다음 단계)
-     *  5) 결제(현재 스텁, 항상 성공) — 실패 시 예외로 트랜잭션 롤백 → 점유도 원복
-     *  6) participation INSERT (PARTICIPATING)
+     *  3) 중복 검사(공구 단위): 이미 활성 참여 중이거나, 이미 대기열에 있으면 거부
+     *  4) 매진 여부로 분기
+     *     - 매진     → waiting_queue INSERT 후 QUEUED 반환 (점유·결제 안 함)
+     *     - 정원 남음 → occupy(+1) → 결제(스텁) → participation INSERT 후 PARTICIPATED 반환
      *
-     * 옵션 행 락이 commit까지 유지되므로 동시 참여가 직렬화되어 orderQty(=옵션별 정원) 초과가 차단된다 (NFR-001).
+     * 매진 판단(option.isSoldOut())을 옵션 행 락 안에서 하는 이유:
+     * occupied_count 를 읽어 매진을 판정하는데, 락 없이 읽으면 동시 참여가 같은 자리를
+     * 둘 다 "정원 남음"으로 보고 함께 occupy 해 정원을 초과할 수 있다.
+     * 락이 commit까지 유지되므로 동시 참여가 직렬화되어 orderQty(옵션 정원) 초과가 차단된다 (NFR-001).
      *
      * @param groupBuySeq 참여할 공구 seq
      * @param optionSeq   선택한 group_buy_options.seq
      * @param memberSeq   참여 회원 seq
+     * @return 정규 참여 성공이면 PARTICIPATED, 매진으로 대기열 등록되면 QUEUED
      */
     @Transactional
-    public void participate(Long groupBuySeq, Long optionSeq, Long memberSeq) {
+    public ParticipateResult participate(Long groupBuySeq, Long optionSeq, Long memberSeq) {
         // 1) 옵션 행 비관적 락 (동시 참여 직렬화)
         GroupBuyOptions option = groupBuyOptionsRepository.findBySeqForUpdate(optionSeq)
                 .orElseThrow(() -> new IllegalArgumentException("해당 공구 옵션을 찾을 수 없습니다. seq=" + optionSeq));
@@ -163,20 +175,41 @@ public class GroupBuyService {
             throw new IllegalStateException("이미 마감된 공동구매입니다.");
         }
 
-        // 3) 중복참여 검사: 같은 공구에 진행 중(PARTICIPATING/PAYMENT_PENDING)인 참여가 있으면 거부
+        // 3) 중복 검사 (공구 단위, 1인 1상품 원칙). 매진 여부와 무관하게 먼저 막는다.
+        //    3-1) 이미 활성 참여 중(PARTICIPATING/PAYMENT_PENDING)이면 거부 (취소 후 재참여는 허용)
         if (participationRepository.existsByGroupBuySeqAndMemberSeqAndStatusIn(
                 groupBuySeq, memberSeq, ACTIVE_PARTICIPATION_STATUSES)) {
             throw new IllegalStateException("이미 이 공동구매에 참여 중입니다.");
         }
+        //    3-2) 이미 이 공구 대기열에 등록돼 있으면 거부 (다른 옵션 대기열이라도 막음)
+        if (waitingQueueRepository.existsByGroupBuySeqAndMemberSeq(groupBuySeq, memberSeq)) {
+            throw new IllegalStateException("이미 이 공동구매 대기열에 등록되어 있습니다.");
+        }
 
-        // 4) 옵션 점유(+1). 매진이면 예외 (대기열 승격은 다음 단계)
+        // 4) 매진 여부로 분기 (판단은 위 옵션 행 락 안에서 이뤄진다)
+        if (option.isSoldOut()) {
+            // 4-A) 매진 → 대기열 등록. 점유(occupied_count)·결제는 건드리지 않는다.
+            //      대기열 대기자는 아직 점유 인원이 아니며(occupied = PARTICIPATING + PAYMENT_PENDING),
+            //      정규 참여자가 이탈해 자리가 나면 FIFO(created_at)로 승격된다 (승격은 취소 흐름에서 처리, 다음 단계).
+            waitingQueueRepository.save(WaitingQueue.builder()
+                    .groupBuy(groupBuy)
+                    .groupBuyOptions(option)
+                    .memberSeq(memberSeq)
+                    .createdAt(LocalDateTime.now())   // FIFO 승격 순서의 기준이 되는 등록 시각
+                    .build());
+            return ParticipateResult.QUEUED;
+        }
+
+        // 4-B) 정원 남음 → 정규 참여
+        // 옵션 점유(+1). 위에서 isSoldOut()을 확인했으니 통과하지만, occupy()는 내부에서도
+        // 매진을 재검사해 이중 방어한다(NFR-001).
         option.occupy();
         // 명시적 save 불필요: 락으로 조회한 option은 영속 상태라 commit 시 변경감지로 UPDATE 됨.
 
-        // 5) 결제(현재 스텁: 항상 성공). 실패 시 예외 → 트랜잭션 롤백으로 점유도 원복
+        // 결제(현재 스텁: 항상 성공). 실패 시 예외 → 트랜잭션 롤백으로 점유도 원복
         paymentPort.pay(memberSeq, groupBuy.getFinalPrice());
 
-        // 6) 참여 INSERT (정규 참여라 paymentDeadline/promotedAt은 null)
+        // 참여 INSERT (정규 참여라 paymentDeadline/promotedAt은 null)
         participationRepository.save(Participation.builder()
                 .groupBuy(groupBuy)
                 .groupBuyOptions(option)
@@ -184,6 +217,8 @@ public class GroupBuyService {
                 .status(ParticipationStatus.PARTICIPATING)
                 .createdAt(LocalDateTime.now())
                 .build());
+
+        return ParticipateResult.PARTICIPATED;
     }
 
     /** 공구 목록 조회. */
