@@ -62,4 +62,22 @@ public class Participation {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * 참여 취소: 상태를 CANCELLED로 전이.
+     * setter를 열지 않고 의미 있는 도메인 메서드로 상태를 바꾼다(GroupBuyOptions.occupy/release와 동일한 패턴).
+     * 영속 상태의 엔티티이므로 트랜잭션 commit 시 변경감지로 UPDATE 된다.
+     */
+    public void cancel() {
+        this.status = ParticipationStatus.CANCELLED;
+    }
+
+    /**
+     * 승격자 결제 완료: 결제대기(PAYMENT_PENDING) → 참여중(PARTICIPATING)으로 전이.
+     * 승격 시 이미 옵션을 점유(occupied_count)한 상태이므로, 이 전이로 점유 수는 변하지 않는다.
+     * 다만 확정 인원(PARTICIPATING 수)에 비로소 포함된다 → 결제 완료 = 확정 정합성(NFR-003).
+     */
+    public void confirmPayment() {
+        this.status = ParticipationStatus.PARTICIPATING;
+    }
 }
