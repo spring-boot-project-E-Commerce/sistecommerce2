@@ -50,6 +50,11 @@ CREATE TABLE waiting_queue (
 CREATE SEQUENCE participation_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE waiting_queue_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 
+-- 취소 테스트는 시나리오별로 공구/옵션을 동적 생성한다(특히 T_lock 검증은 '마감 임박' 공구가 필요).
+-- 아래 더미(seq=1)와 겹치지 않도록 100부터 시작.
+CREATE SEQUENCE group_buy_seq START WITH 100 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE group_buy_options_seq START WITH 100 INCREMENT BY 1 NOCACHE;
+
 -- 진행 중(ONGOING) 공구 1건. end_at 은 타임존 영향 없이 항상 미래가 되도록 먼 미래 고정값.
 INSERT INTO group_buy (seq, product_seq, start_at, end_at, created_at, min_count, max_count, original_price, final_price, status)
 VALUES (1, 1, TIMESTAMP '2000-01-01 00:00:00', TIMESTAMP '2999-12-31 23:59:59', TIMESTAMP '2000-01-01 00:00:00', 1, 10, 10000, 8000, 'ONGOING');

@@ -62,4 +62,13 @@ public class Participation {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * 참여 취소: 상태를 CANCELLED로 전이.
+     * setter를 열지 않고 의미 있는 도메인 메서드로 상태를 바꾼다(GroupBuyOptions.occupy/release와 동일한 패턴).
+     * 영속 상태의 엔티티이므로 트랜잭션 commit 시 변경감지로 UPDATE 된다.
+     */
+    public void cancel() {
+        this.status = ParticipationStatus.CANCELLED;
+    }
 }
