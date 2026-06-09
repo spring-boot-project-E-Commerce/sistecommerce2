@@ -28,12 +28,13 @@ public class MyReviewService {
 
     /**
      * 리뷰 수정
-     * TODO: 구현 예정
      */
     @Transactional
     public void updateReview(Long reviewSeq, Long productSeq, Long memberSeq, Integer rating, String content) {
-        // TODO: 구현 예정
-        throw new UnsupportedOperationException("updateReview 미구현");
+        int updated = reviewRepository.updateReview(reviewSeq, productSeq, memberSeq, rating, content);
+        if (updated == 0) {
+            throw new IllegalArgumentException("수정할 수 없는 리뷰입니다.");
+        }
     }
 
     /**
