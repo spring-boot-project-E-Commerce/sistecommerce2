@@ -31,6 +31,7 @@ public class SessionManagementService {
     public static final String PLATFORM_ATTR = "PLATFORM";
 
     private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+    private final SseEmitterService sseEmitterService;
 
     /**
      * 로그인 성공 후 호출.
@@ -53,8 +54,8 @@ public class SessionManagementService {
             if (platform.equals(storedPlatform) && !sessionId.equals(session.getId())) {
                 log.info("동일 플랫폼 세션 강제 종료 - user: {}, platform: {}, sessionId: {}",
                         username, platform, sessionId);
-                // TODO: B-5에서 SSE 알림 연결 (sessionId에 강제 로그아웃 이벤트 전송)
-                sessionRepository.deleteById(sessionId);
+                sseEmitterService.sendForceLogout(sessionId); // SSE 알림 먼저
+                sessionRepository.deleteById(sessionId);     // 이후 세션 삭제
             }
         });
 
