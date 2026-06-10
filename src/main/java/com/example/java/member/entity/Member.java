@@ -94,10 +94,11 @@ public class Member {
     }
 
     public void updatePassword(String encodedPassword) {
-        this.password     = encodedPassword;
-        this.pwChangedAt  = java.time.LocalDateTime.now();
-        this.updatedAt    = java.time.LocalDateTime.now();
-    
+        this.password = encodedPassword;
+        this.pwChangedAt = java.time.LocalDateTime.now();
+        this.updatedAt = java.time.LocalDateTime.now();
+    }
+
     public void changeStatus(Integer status) {
         this.status = status;
 
