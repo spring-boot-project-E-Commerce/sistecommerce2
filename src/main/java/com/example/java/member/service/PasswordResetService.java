@@ -70,7 +70,9 @@ public class PasswordResetService {
             throw new IllegalArgumentException("만료된 링크입니다. 다시 요청해 주세요.");
         }
 
-        return emailToken.getMember();
+        Member member = emailToken.getMember();
+        member.getUsername(); // 트랜잭션 내부에서 proxy 강제 초기화
+        return member;
     }
 
     /**
