@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.example.java.member.security.CustomOAuth2UserService;
+import com.example.java.member.security.FormLoginSuccessHandler;
 import com.example.java.member.security.OAuth2FailureHandler;
 import com.example.java.member.security.OAuth2SuccessHandler;
 
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final FormLoginSuccessHandler formLoginSuccessHandler;
     private final OAuth2SuccessHandler oauth2SuccessHandler;
     private final OAuth2FailureHandler oauth2FailureHandler;
 
@@ -43,6 +45,9 @@ public class SecurityConfig {
 
                 //주문 및 마이페이지 로그인 필요
                 .requestMatchers("/order/**", "/mypage/**").authenticated()
+
+                // SSE 연결 (로그인 사용자만)
+                .requestMatchers("/sse/connect").authenticated()
 
                 // TODO 개발용으로 모두허용 (나중에 없애야)
                 .anyRequest().permitAll()
