@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.java.member.entity.Memberships;
 import com.example.java.member.repository.MembershipsRepository;
@@ -31,6 +32,7 @@ public class MembershipScheduler {
      * 만료 처리.
      * canceled 상태이면서 expireAt이 현재 시각 이전인 멤버십 → expired 로 변경.
      */
+    @Transactional
     @Scheduled(cron = "0 0 2 * * *")   // 매일 02:00
     public void processExpired() {
         LocalDateTime now = LocalDateTime.now();
@@ -53,6 +55,7 @@ public class MembershipScheduler {
      * 자동 갱신.
      * active 상태이면서 nextBillingAt이 현재 시각 이전인 멤버십 → Toss 빌링 후 +1개월 갱신.
      */
+    @Transactional
     @Scheduled(cron = "0 0 9 * * *")   // 매일 09:00
     public void processRenewal() {
         LocalDateTime now = LocalDateTime.now();
