@@ -38,7 +38,7 @@
     <div class="card">
 
         <form method="get"
-              th:action="@{/admin/inventories}"
+              th:action="@{/admin/product-requests}"
               class="space-y-4">
 
             <!-- 판매 상태 -->
@@ -75,61 +75,11 @@
 			        </label>
 			    </div>
 			</div>
-            
-            <!-- 상품 재고 -->
-            <div class="flex items-center gap-4">
-                <span class="text-label w-24">상품 재고</span>
-                <div class="flex gap-2">
-                    <label class="filter-btn">
-                        <input type="radio" name="stockType" value=""
-						       th:checked="${search.stockType == ''}">
-						전체
-                    </label>
-                    <label class="filter-btn">
-                        <input type="radio" name="stockType" value="UNDER_SAFE"
-						       th:checked="${search.stockType == 'UNDER_SAFE'}">
-						안전재고 이하
-                    </label>
-                </div>
-            </div>
 
-            <!-- 상품 가격 -->
-            <div class="flex items-center gap-4">
-                <span class="text-label w-24">상품 가격</span>
-
-                <div class="flex items-center gap-2">
-                    <input type="number"
-				       name="priceFrom"
-				       th:value="${search.priceFrom}"
-				       class="form-input w-32">
-                    <span class="text-label">원 이상 ~</span>
-                    <input type="number"
-				       name="priceTo"
-				       th:value="${search.priceTo}"
-				       class="form-input w-32">
-                    <span class="text-label">원 이하</span>
-                </div>
-            </div>
-            
-            <!-- 기간 검색 (등록일) -->
-	        <div class="flex items-center gap-4">
-	            <span class="text-label w-24">기간 검색</span>
-	
-	            <div class="flex items-center gap-2">
-	                <input type="datetime-local"
-				       name="createdDateFrom"
-				       th:value="${search.createdDateFrom}"
-				       class="form-input">
-	                <span class="text-label">~</span>
-	                <input type="datetime-local"
-				       name="createdDateTo"
-				       th:value="${search.createdDateTo}"
-				       class="form-input">
-	            </div>
-	        </div>
 
             <!-- 검색 -->
             <div class="flex items-center gap-4">
+            <span class="text-label w-24">검색</span>
             <select name="searchType"
 			        class="form-input w-40">		
 			    <option value="productName"
@@ -140,18 +90,11 @@
 			            th:selected="${searchType == 'sellerName'}">
 			        판매처명
 			    </option>
-			    <option value="requestSeq"
-			            th:selected="${searchType == 'requestSeq'}">
-			        요청번호
-			    </option>
 			</select>
-                <span class="text-label w-24">검색</span>
-
                 <div class="flex gap-2 w-full">
-
                     <input type="text"
 				       name="keyword"
-				       th:value="${search.keyword}"
+				       th:value="${keyword}"
 				       class="form-input w-[28rem]"
 				       placeholder="상품명 검색">
 
@@ -168,8 +111,6 @@
     </div>
 
     <!-- ================= 목록 ================= -->
-
-    <h4 class="text-title mb-4">재고 목록</h4>
 
 	<div class="flex justify-between items-center mb-4">
 	    <h4 class="text-title">
@@ -239,13 +180,13 @@
 					            ' text-red-500'
 					        }">
 					    </td>
-					    <!-- 판매처 -->
-					    <td class="p-2"
-					        th:text="${item.sellerName}">
-					    </td>
 					    <!-- 상품명 -->
 					    <td class="p-2"
 					        th:text="${item.productName}">
+					    </td>
+					    <!-- 판매처 -->
+					    <td class="p-2"
+					        th:text="${item.sellerName}">
 					    </td>
 					    <!-- 요청일 -->
 					    <td class="p-2"
