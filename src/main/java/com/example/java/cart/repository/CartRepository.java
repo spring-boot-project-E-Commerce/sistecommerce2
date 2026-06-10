@@ -19,4 +19,6 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
 	Optional<Cart> findByMember_SeqAndOptions_Seq(Long memberSeq, Long optionsSeq);
 	
 	void deleteByMember_Seq(Long memberSeq);
+	
+	void deleteByMember_SeqAndOptions_SeqIn(Long memberSeq, List<Long> optionsSeqList);
 }

@@ -22,12 +22,12 @@ public class OrdersViewService {
     private final OrdersQueryRepository ordersQueryRepository;
     private final MemberAddressService memberAddressService;
 
-    public List<CheckoutItemDto> getCheckoutItems(Long memberSeq) {
+    public List<CheckoutItemDto> getCheckoutItems(Long memberSeq, List<Long> cartSeqList) {
         List<CheckoutItemDto> items =
-                ordersQueryRepository.findCheckoutItemsByMemberCart(memberSeq);
+                ordersQueryRepository.findCheckoutItemsByMemberCart(memberSeq, cartSeqList);
 
         if (items.isEmpty()) {
-            throw new IllegalStateException("장바구니에 결제할 상품이 없습니다.");
+            throw new IllegalStateException("선택한 장바구니 상품이 없거나 결제할 수 없는 상품입니다.");
         }
 
         return items;
@@ -37,9 +37,6 @@ public class OrdersViewService {
         return ordersQueryRepository.findAvailableCouponsByMemberSeq(memberSeq);
     }
 
-    /**
-     * 로그인 회원이 DB에 저장한 배송지 목록.
-     */
     public List<DeliveryAddressDto> getDeliveryAddresses(Long memberSeq) {
         return memberAddressService.myAddress(memberSeq)
                 .stream()
@@ -47,8 +44,8 @@ public class OrdersViewService {
                 .toList();
     }
 
-    public PriceSummaryDto getPriceSummary(Long memberSeq, Long memberCouponSeq) {
-        List<CheckoutItemDto> items = getCheckoutItems(memberSeq);
+    public PriceSummaryDto getPriceSummary(Long memberSeq, Long memberCouponSeq, List<Long> cartSeqList) {
+        List<CheckoutItemDto> items = getCheckoutItems(memberSeq, cartSeqList);
 
         int productTotalPrice = items.stream()
                 .mapToInt(CheckoutItemDto::totalPrice)
