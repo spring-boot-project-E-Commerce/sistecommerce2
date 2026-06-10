@@ -33,23 +33,26 @@ public class ReviewRepository {
 
         // 처음 조회일 때는 lastReviewSeq가 null
         // 다음 조회부터는 마지막으로 본 리뷰 seq보다 작은 리뷰만 조회
-        String sql = """
-                SELECT
-                    seq,
-                    product_seq,
-                    member_seq,
-                    order_item_seq,
-                    rating,
-                    content,
-                    created_date,
-                    updated_date,
-                    status
-                FROM review
-                WHERE status = 'NORMAL'
-                  AND (:lastReviewSeq IS NULL OR seq < :lastReviewSeq)
-                ORDER BY seq DESC
-                FETCH NEXT :limit ROWS ONLY
-                """;
+    	String sql = """
+    	        SELECT
+    	            r.seq,
+    	            r.product_seq,
+    	            r.member_seq,
+    	            m.nickname AS nickname,
+    	            r.order_item_seq,
+    	            r.rating,
+    	            r.content,
+    	            r.created_date,
+    	            r.updated_date,
+    	            r.status
+    	        FROM review r
+    	        LEFT JOIN member m
+    	            ON r.member_seq = m.seq
+    	        WHERE r.status = 'NORMAL'
+    	          AND (:lastReviewSeq IS NULL OR r.seq < :lastReviewSeq)
+    	        ORDER BY r.seq DESC
+    	        FETCH NEXT :limit ROWS ONLY
+    	        """;
 
         // HashMap은 null 값을 넣을 수 있어서 lastReviewSeq가 null이어도 안전함
         Map<String, Object> params = new HashMap<>();
@@ -64,24 +67,27 @@ public class ReviewRepository {
 
         // 처음 조회일 때는 lastReviewSeq가 null
         // 다음 조회부터는 마지막으로 본 리뷰 seq보다 작은 리뷰만 조회
-        String sql = """
-                SELECT
-                    seq,
-                    product_seq,
-                    member_seq,
-                    order_item_seq,
-                    rating,
-                    content,
-                    created_date,
-                    updated_date,
-                    status
-                FROM review
-                WHERE product_seq = :productSeq
-                  AND status = 'NORMAL'
-                  AND (:lastReviewSeq IS NULL OR seq < :lastReviewSeq)
-                ORDER BY seq DESC
-                FETCH NEXT :limit ROWS ONLY
-                """;
+    	String sql = """
+    	        SELECT
+    	            r.seq,
+    	            r.product_seq,
+    	            r.member_seq,
+    	            m.nickname AS nickname,
+    	            r.order_item_seq,
+    	            r.rating,
+    	            r.content,
+    	            r.created_date,
+    	            r.updated_date,
+    	            r.status
+    	        FROM review r
+    	        LEFT JOIN member m
+    	            ON r.member_seq = m.seq
+    	        WHERE r.product_seq = :productSeq
+    	          AND r.status = 'NORMAL'
+    	          AND (:lastReviewSeq IS NULL OR r.seq < :lastReviewSeq)
+    	        ORDER BY r.seq DESC
+    	        FETCH NEXT :limit ROWS ONLY
+    	        """;
 
         // HashMap은 null 값을 넣을 수 있어서 lastReviewSeq가 null이어도 안전함
         Map<String, Object> params = new HashMap<>();
@@ -197,6 +203,7 @@ public class ReviewRepository {
                         .seq(rs.getLong("seq"))
                         .productSeq(rs.getLong("product_seq"))
                         .memberSeq(rs.getLong("member_seq"))
+                        .nickname(rs.getString("nickname"))
                         .orderItemSeq(getNullableLong(rs, "order_item_seq"))
                         .rating(rs.getInt("rating"))
                         .content(rs.getString("content"))
