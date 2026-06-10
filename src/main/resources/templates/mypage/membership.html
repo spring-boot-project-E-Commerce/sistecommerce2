@@ -297,7 +297,7 @@
         const payment = tossPayments.payment({ customerKey: customerKey });
 
         await payment.requestBillingAuth({
-            method: '카드',
+            method: 'CARD',
             successUrl: window.location.origin + '/mypage/membership/billing/success',
             failUrl:    window.location.origin + '/mypage/membership/billing/fail',
             customerEmail: '',
