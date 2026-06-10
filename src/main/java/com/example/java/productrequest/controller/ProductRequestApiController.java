@@ -18,7 +18,7 @@ public class ProductRequestApiController {
 
     private final ProductRequestService productRequestService;
 
-    @PostMapping("/product-request/approve")
+    @PostMapping("/product-requests/approve")
     public ResponseEntity<?> approve(
             @RequestBody ProductRequestProcessDto dto) {
 
@@ -27,7 +27,7 @@ public class ProductRequestApiController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/product-request/reject")
+    @PostMapping("/product-requests/reject")
     public ResponseEntity<?> reject(
             @RequestBody ProductRequestProcessDto dto) {
 
