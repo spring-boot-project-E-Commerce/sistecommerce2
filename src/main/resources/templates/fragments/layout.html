@@ -32,6 +32,23 @@
 <body>
 <th:block th:fragment="scripts">
     <script>lucide.createIcons();</script>
+    <script th:inline="javascript">
+        // 로그인 상태일 때만 SSE 연결
+        const isAuthenticated = /*[[${#authorization.expression('isAuthenticated()')}]]*/ false;
+        if (isAuthenticated) {
+            const sse = new EventSource('/sse/connect');
+
+            sse.addEventListener('force-logout', function (e) {
+                sse.close();
+                alert('다른 기기에서 동일 플랫폼으로 로그인하여 이 세션이 종료됩니다.');
+                window.location.href = '/member/logout';
+            });
+
+            sse.onerror = function () {
+                sse.close();
+            };
+        }
+    </script>
 </th:block>
 </body>
 </html>
