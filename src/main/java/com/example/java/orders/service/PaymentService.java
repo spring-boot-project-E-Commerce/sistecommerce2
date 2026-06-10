@@ -3,8 +3,10 @@ package com.example.java.orders.service;
 import com.example.java.cart.repository.CartRepository;
 import com.example.java.member.entity.MemberCoupon;
 import com.example.java.member.repository.MemberCouponRepository;
+import com.example.java.orders.entity.OrderItem;
 import com.example.java.orders.entity.Orders;
 import com.example.java.orders.entity.Payment;
+import com.example.java.orders.repository.OrderItemRepository;
 import com.example.java.orders.repository.OrdersRepository;
 import com.example.java.orders.repository.PaymentRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,6 +30,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -38,6 +41,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final MemberCouponRepository memberCouponRepository;
     private final CartRepository cartRepository;
+    private final OrderItemRepository orderItemRepository;
     private final ObjectMapper objectMapper;
 
     @Value("${toss.secret-key}")
@@ -55,7 +59,7 @@ public class PaymentService {
      * 4. payment 저장
      * 5. orders 결제완료 처리
      * 6. 사용 쿠폰 상태 변경
-     * 7. 장바구니 비우기
+     * 7. 이번 주문에 포함된 상품만 장바구니에서 삭제
      */
     @Transactional
     public void confirmPayment(String paymentKey,
@@ -167,10 +171,17 @@ public class PaymentService {
         }
 
         /*
-            결제 성공 후 장바구니 비우기.
-            현재 주문 구조는 '회원의 장바구니 전체 결제'이므로 해당 회원의 장바구니를 모두 삭제한다.
+            결제 성공 후 장바구니 삭제.
+            기존 방식:
+            - cartRepository.deleteByMember_Seq(order.getMemberSeq());
+            - 회원 장바구니 전체 삭제
+
+            수정 방식:
+            - 이번 주문의 order_item에 들어간 optionsSeq만 조회
+            - 해당 optionsSeq에 해당하는 장바구니 row만 삭제
+            - 즉, 체크해서 결제한 상품만 장바구니에서 제거된다.
          */
-        cartRepository.deleteByMember_Seq(order.getMemberSeq());
+        deleteOrderedCartItems(order);
     }
 
     /**
@@ -221,6 +232,26 @@ public class PaymentService {
                 .build();
 
         paymentRepository.save(payment);
+    }
+
+    /**
+     * 이번 주문에 포함된 상품만 장바구니에서 삭제한다.
+     */
+    private void deleteOrderedCartItems(Orders order) {
+        List<Long> orderedOptionsSeqList = orderItemRepository.findByOrderSeq(order.getSeq())
+                .stream()
+                .map(OrderItem::getOptionsSeq)
+                .distinct()
+                .toList();
+
+        if (orderedOptionsSeqList.isEmpty()) {
+            return;
+        }
+
+        cartRepository.deleteByMember_SeqAndOptions_SeqIn(
+                order.getMemberSeq(),
+                orderedOptionsSeqList
+        );
     }
 
     /**
