@@ -131,8 +131,12 @@ public class ProductDetailService {
         /*
             로그인한 회원인 경우에만 찜 여부를 확인합니다.
         */
+//        if (memberSeq != null) {
+//            dto.setWished(productDetailRepository.existsWish(seq, memberSeq));
+//        }
+        
         if (memberSeq != null) {
-            dto.setWished(productDetailRepository.existsWish(seq, memberSeq));
+            dto.setWished(false);
         }
 
         return dto;
