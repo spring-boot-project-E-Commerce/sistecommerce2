@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,15 +27,14 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
 
     /**
-     * 이름 + 이메일로 회원 조회 후 PW_RESET 토큰 발급 & 메일 발송
+     * 아이디 + 이메일로 회원 조회 후 PW_RESET 토큰 발급 & 메일 발송
      * 일치하는 회원이 없으면 조용히 리턴 (이메일 존재 여부 노출 방지)
      */
     @Transactional
-    public void sendResetEmail(String name, String email) {
-        List<Member> members = memberRepository.findByNameAndEmail(name, email);
-        if (members.isEmpty()) return;
-
-        Member member = members.get(0);
+    public void sendResetEmail(String username, String email) {
+        Member member = memberRepository.findByUsernameAndEmail(username, email)
+                .orElse(null);
+        if (member == null) return;
 
         // 평문 토큰 생성 (UUID)
         String rawToken = UUID.randomUUID().toString().replace("-", "");
