@@ -50,7 +50,7 @@ public class OrdersController {
          */
         model.addAttribute("cartItems", ordersViewService.getCheckoutItems(memberSeq));
 
-        model.addAttribute("deliveryAddresses", ordersViewService.getDeliveryAddresses());
+        model.addAttribute("deliveryAddresses", ordersViewService.getDeliveryAddresses(memberSeq));
         model.addAttribute("coupons", ordersViewService.getCoupons(memberSeq));
         model.addAttribute("selectedMemberCouponSeq", memberCouponSeq);
         model.addAttribute("priceSummary", ordersViewService.getPriceSummary(memberSeq, memberCouponSeq));
