@@ -10,7 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.java.member.entity.Member;
+import com.example.java.member.entity.MemberCoupon;
+import com.example.java.member.entity.Memberships;
+import com.example.java.member.repository.CouponRepository;
+import com.example.java.member.repository.MemberCouponRepository;
 import com.example.java.member.repository.MemberRepository;
+import com.example.java.member.repository.MembershipsRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +25,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends OidcUserService {
 
-    private final MemberRepository memberRepository;
+    private final MemberRepository     memberRepository;
+    private final MembershipsRepository membershipsRepository;
+    private final MemberCouponRepository memberCouponRepository;
+    private final CouponRepository      couponRepository;
 
     @Override
     @Transactional
@@ -41,10 +49,19 @@ public class CustomOAuth2UserService extends OidcUserService {
                 })
                 .orElseGet(() -> {
                     String nickname = resolveNickname(userInfo.getName());
-                    return memberRepository.save(
+                    Member saved = memberRepository.save(
                             Member.ofSocial(username, nickname, userInfo.getName(),
                                     userInfo.getEmail(), userInfo.getProvider())
                     );
+                    // 멤버십 미가입 상태 생성
+                    membershipsRepository.save(Memberships.builder()
+                            .member(saved).status(Memberships.STATUS_NONE).build());
+                    // 신규 쿠폰 발급 (coupon seq=1)
+                    memberCouponRepository.save(MemberCoupon.builder()
+                            .member(saved)
+                            .coupon(couponRepository.getReferenceById(1L))
+                            .status(0).build());
+                    return saved;
                 });
 
         log.debug("구글 OIDC 로그인: {}", username);

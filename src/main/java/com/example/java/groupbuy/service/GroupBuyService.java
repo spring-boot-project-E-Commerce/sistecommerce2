@@ -428,6 +428,60 @@ public class GroupBuyService {
         promoteNextWaiting(option, groupBuy, now); // 같은 옵션 FIFO 다음 1명 승격
     }
 
+    /**
+     * 공구 마감 처리 (스케줄러가 마감 시각 지난 공구마다 1건씩 호출) — 확정/무산 판정.
+     *
+     * 확정 인원은 결제 완료(PARTICIPATING) 수만 센다. 결제대기(PAYMENT_PENDING) 승격자는
+     * 아직 돈을 안 냈으므로 확정 인원에서 제외한다 — 그래야 "확정 인원 = 결제 완료 건수"가
+     * 성립한다 (NFR-003 정합성).
+     *
+     * 흐름:
+     *  1) 공구 조회 + ONGOING 확인 (아니면 skip → 이미 마감됐거나 중단된 공구 재처리 방지)
+     *  2) 마감 시각 도래 확인 (스케줄러가 거르지만 방어)
+     *  3) 남은 PAYMENT_PENDING → EXPIRED (결제 못하고 마감, 환불 없음)
+     *  4) 판정:
+     *     - 확정(결제완료 ≥ min_count): 공구 CONFIRMED + 참여자 전원 CONFIRMED
+     *     - 무산(미달): 공구 FAILED + 참여자 전원 환불 후 FAILED
+     *
+     * @param groupBuySeq 마감 처리할 공구 seq
+     */
+    @Transactional
+    public void close(Long groupBuySeq) {
+        // 1) ONGOING 공구만 처리. status를 CONFIRMED/FAILED로 바꾸므로 다음 틱에는 자동으로 걸러져
+        //    재진입(중복 마감·중복 환불)이 방지된다.
+        GroupBuy groupBuy = groupBuyRepository.findById(groupBuySeq).orElse(null);
+        if (groupBuy == null || groupBuy.getStatus() != GroupBuyStatus.ONGOING) {
+            return;
+        }
+
+        // 2) 마감 시각 도래 방어
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(groupBuy.getEndAt())) {
+            return;
+        }
+
+        // 3) 마감 순간까지 결제 못한 승격자(PAYMENT_PENDING) → EXPIRED (환불 없음 — 결제 전)
+        participationRepository.findByGroupBuySeqAndStatus(groupBuySeq, ParticipationStatus.PAYMENT_PENDING)
+                .forEach(Participation::expire);
+
+        // 4) 확정 인원 = 결제 완료자(PARTICIPATING). 이들이 곧 확정/무산 처리 대상이다.
+        List<Participation> participating = participationRepository
+                .findByGroupBuySeqAndStatus(groupBuySeq, ParticipationStatus.PARTICIPATING);
+
+        if (participating.size() >= groupBuy.getMinCount()) {
+            // 확정: 공구 + 결제 완료자 전원 CONFIRMED (환불 없음 — 성사됐으니 결제 유지)
+            groupBuy.confirm(now);
+            participating.forEach(Participation::confirm);
+        } else {
+            // 무산: 공구 FAILED + 결제 완료자 전원 환불 후 FAILED (전원 일괄 결제취소)
+            groupBuy.fail(now);
+            participating.forEach(p -> {
+                paymentPort.cancel(p.getMemberSeq(), groupBuy.getFinalPrice());
+                p.fail();
+            });
+        }
+    }
+
     /** 공구 목록 조회. */
     @Transactional(readOnly = true)
     public List<GroupBuyDto> findAll() {
