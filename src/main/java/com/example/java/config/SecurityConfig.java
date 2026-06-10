@@ -37,7 +37,7 @@ public class SecurityConfig {
             .formLogin(form -> form
                 .loginPage("/member/login")         // 커스텀 로그인 페이지
                 .loginProcessingUrl("/member/login") // POST 처리 URL
-                .defaultSuccessUrl("/", true)        // 로그인 성공 시
+                .defaultSuccessUrl("/", false)        // 로그인 성공 시
                 .failureUrl("/member/login?error")   // 로그인 실패 시
                 .permitAll()
             )
