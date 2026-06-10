@@ -29,10 +29,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         OAuth2User oAuth2User = super.loadUser(userRequest);
         Map<String, Object> attributes = oAuth2User.getAttributes();
 
-        String registrationId = userRequest.getClientRegistration().getRegistrationId(); // "google" | "naver"
+        String registrationId = userRequest.getClientRegistration().getRegistrationId(); // "google"
         OAuth2UserInfo userInfo = resolveUserInfo(registrationId, attributes);
 
-        String username = userInfo.toUsername(); // "google_109374..." | "naver_abc123..."
+        String username = userInfo.toUsername(); // "google_109374..."
 
         Member member = memberRepository.findByUsername(username)
                 .map(existing -> {
@@ -55,7 +55,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private OAuth2UserInfo resolveUserInfo(String registrationId, Map<String, Object> attributes) {
         return switch (registrationId) {
             case "google" -> new GoogleOAuth2UserInfo(attributes);
-            case "naver"  -> new NaverOAuth2UserInfo(attributes);
             default -> throw new OAuth2AuthenticationException("지원하지 않는 소셜 provider: " + registrationId);
         };
     }
