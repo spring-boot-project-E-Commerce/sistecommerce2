@@ -1,5 +1,7 @@
 package com.example.java.orders.service;
 
+import com.example.java.member.entity.DeliveryAddress;
+import com.example.java.member.service.MemberAddressService;
 import com.example.java.orders.dto.CheckoutItemDto;
 import com.example.java.orders.dto.CouponDto;
 import com.example.java.orders.dto.DeliveryAddressDto;
@@ -18,10 +20,8 @@ import java.util.List;
 public class OrdersViewService {
 
     private final OrdersQueryRepository ordersQueryRepository;
+    private final MemberAddressService memberAddressService;
 
-    /**
-     * 로그인 회원의 장바구니 상품 목록.
-     */
     public List<CheckoutItemDto> getCheckoutItems(Long memberSeq) {
         List<CheckoutItemDto> items =
                 ordersQueryRepository.findCheckoutItemsByMemberCart(memberSeq);
@@ -33,44 +33,20 @@ public class OrdersViewService {
         return items;
     }
 
-    /**
-     * 로그인 회원이 실제 발급받은 사용 가능한 쿠폰 목록.
-     */
     public List<CouponDto> getCoupons(Long memberSeq) {
         return ordersQueryRepository.findAvailableCouponsByMemberSeq(memberSeq);
     }
 
-    public List<DeliveryAddressDto> getDeliveryAddresses() {
-        return List.of(
-                new DeliveryAddressDto(
-                        1L,
-                        "집",
-                        "Y",
-                        "홍길동",
-                        "010-1234-5678",
-                        "06236",
-                        "서울특별시 강남구 테헤란로 123",
-                        "골드아파트 101동 1001호"
-                ),
-                new DeliveryAddressDto(
-                        2L,
-                        "회사",
-                        "N",
-                        "홍길동",
-                        "010-1234-5678",
-                        "04524",
-                        "서울특별시 중구 세종대로 110",
-                        "12층"
-                )
-        );
+    /**
+     * 로그인 회원이 DB에 저장한 배송지 목록.
+     */
+    public List<DeliveryAddressDto> getDeliveryAddresses(Long memberSeq) {
+        return memberAddressService.myAddress(memberSeq)
+                .stream()
+                .map(this::toDeliveryAddressDto)
+                .toList();
     }
 
-    /**
-     * 서버 기준 최종 결제금액 계산.
-     *
-     * 상품 금액은 로그인 회원의 장바구니 기준으로 계산한다.
-     * memberCouponSeq는 coupon.seq가 아니라 member_coupon.seq다.
-     */
     public PriceSummaryDto getPriceSummary(Long memberSeq, Long memberCouponSeq) {
         List<CheckoutItemDto> items = getCheckoutItems(memberSeq);
 
@@ -106,6 +82,19 @@ public class OrdersViewService {
 
     public OrderPreviewDto getOrderPreview() {
         return new OrderPreviewDto("GM-" + System.currentTimeMillis());
+    }
+
+    private DeliveryAddressDto toDeliveryAddressDto(DeliveryAddress address) {
+        return new DeliveryAddressDto(
+                address.getSeq(),
+                address.getAddressAlias(),
+                address.getDefaultYn(),
+                address.getRecipientName(),
+                address.getRecipientPhone(),
+                address.getZipcode(),
+                address.getAddress(),
+                address.getAddressDetail()
+        );
     }
 
     private int calculateCouponDiscount(int productTotalPrice, CouponDto coupon) {
