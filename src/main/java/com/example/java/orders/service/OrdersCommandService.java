@@ -57,7 +57,7 @@ public class OrdersCommandService {
         /*
             하드코딩 상품이 아니라 로그인 회원의 장바구니 상품을 조회한다.
          */
-        List<CheckoutItemDto> items = ordersViewService.getCheckoutItems(memberSeq);
+        List<CheckoutItemDto> items = ordersViewService.getCheckoutItems(memberSeq, requestDto.getCartSeq());
 
         if (items.isEmpty()) {
             throw new IllegalStateException("장바구니에 결제할 상품이 없습니다.");
@@ -68,7 +68,7 @@ public class OrdersCommandService {
             서버에서 장바구니 상품 + 회원 쿠폰 기준으로 다시 계산한다.
          */
         PriceSummaryDto priceSummary =
-                ordersViewService.getPriceSummary(memberSeq, requestDto.getMemberCouponSeq());
+        		ordersViewService.getPriceSummary(memberSeq, requestDto.getMemberCouponSeq(), requestDto.getCartSeq());
 
         /*
             배송지 정보는 서버에서 다시 조회한다.
@@ -145,49 +145,53 @@ public class OrdersCommandService {
     }
 
     private void validateCheckoutRequest(CheckoutRequestDto requestDto,
-                                         Long memberSeq) {
+            Long memberSeq) {
 
-        if (memberSeq == null) {
-            throw new IllegalArgumentException("로그인 회원 번호가 없습니다.");
-        }
+    	if (memberSeq == null) {
+    		throw new IllegalArgumentException("로그인 회원 번호가 없습니다.");
+    	}
 
-        if (requestDto.getAgreeRequired() == null || !requestDto.getAgreeRequired()) {
-            throw new IllegalArgumentException("주문 동의가 필요합니다.");
-        }
+    	if (requestDto.getCartSeq() == null || requestDto.getCartSeq().isEmpty()) {
+    		throw new IllegalArgumentException("결제할 장바구니 상품을 선택해야 합니다.");
+    	}
 
-        if (requestDto.getPaymentMethod() == null || requestDto.getPaymentMethod().isBlank()) {
-            throw new IllegalArgumentException("결제수단을 선택해야 합니다.");
-        }
+    	if (requestDto.getAgreeRequired() == null || !requestDto.getAgreeRequired()) {
+    		throw new IllegalArgumentException("주문 동의가 필요합니다.");
+    	}
 
-        if (requestDto.getDeliveryType() == null || requestDto.getDeliveryType().isBlank()) {
-            throw new IllegalArgumentException("배송지 선택 방식이 없습니다.");
-        }
+    	if (requestDto.getPaymentMethod() == null || requestDto.getPaymentMethod().isBlank()) {
+    		throw new IllegalArgumentException("결제수단을 선택해야 합니다.");
+    	}
 
-        if ("EXISTING".equals(requestDto.getDeliveryType())) {
-            if (requestDto.getDeliveryAddressSeq() == null) {
-                throw new IllegalArgumentException("기존 배송지를 선택해야 합니다.");
-            }
-        }
+    	if (requestDto.getDeliveryType() == null || requestDto.getDeliveryType().isBlank()) {
+    		throw new IllegalArgumentException("배송지 선택 방식이 없습니다.");
+    	}
 
-        if ("NEW".equals(requestDto.getDeliveryType())) {
-            if (isBlank(requestDto.getRecipientName())) {
-                throw new IllegalArgumentException("받는 사람을 입력해야 합니다.");
-            }
+    	if ("EXISTING".equals(requestDto.getDeliveryType())) {
+    		if (requestDto.getDeliveryAddressSeq() == null) {
+    			throw new IllegalArgumentException("기존 배송지를 선택해야 합니다.");
+    		}
+    	}
 
-            if (isBlank(requestDto.getRecipientPhone())) {
-                throw new IllegalArgumentException("연락처를 입력해야 합니다.");
-            }
+    	if ("NEW".equals(requestDto.getDeliveryType())) {
+    		if (isBlank(requestDto.getRecipientName())) {
+    			throw new IllegalArgumentException("받는 사람을 입력해야 합니다.");
+    		}
 
-            if (isBlank(requestDto.getZipcode())) {
-                throw new IllegalArgumentException("우편번호를 입력해야 합니다.");
-            }
+    		if (isBlank(requestDto.getRecipientPhone())) {
+    			throw new IllegalArgumentException("연락처를 입력해야 합니다.");
+    		}
 
-            if (isBlank(requestDto.getAddress())) {
-                throw new IllegalArgumentException("주소를 입력해야 합니다.");
-            }
-        }
+    		if (isBlank(requestDto.getZipcode())) {
+    			throw new IllegalArgumentException("우편번호를 입력해야 합니다.");
+    		}
+    		
+    		if (isBlank(requestDto.getAddress())) {
+    			throw new IllegalArgumentException("주소를 입력해야 합니다.");
+    		}
+    	}
     }
-
+    
     private DeliveryInfo resolveDeliveryInfo(CheckoutRequestDto requestDto,
                                              Long memberSeq) {
 
