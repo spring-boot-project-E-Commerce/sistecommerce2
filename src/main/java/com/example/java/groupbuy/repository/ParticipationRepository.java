@@ -15,6 +15,9 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
     List<Participation> findByMemberSeq(Long memberSeq);
     List<Participation> findByGroupBuySeqAndMemberSeq(Long groupBuySeq, Long memberSeq);
 
+    /** 특정 공구에서 주어진 상태인 참여 목록 (마감 시 일괄 상태 전이·환불용). */
+    List<Participation> findByGroupBuySeqAndStatus(Long groupBuySeq, ParticipationStatus status);
+
     /**
      * 같은 공구에 해당 회원의 참여가 주어진 상태들 중 하나로 존재하는지.
      * 중복참여 검사용 — 진행 중(PARTICIPATING/PAYMENT_PENDING) 참여가 있으면 재참여를 막는다.
