@@ -28,8 +28,8 @@ public class OrdersQueryRepositoryImpl implements OrdersQueryRepository {
      * 로그인 회원의 장바구니 상품을 주문/결제 화면용 DTO로 조회한다.
      */
     @Override
-    public List<CheckoutItemDto> findCheckoutItemsByMemberCart(Long memberSeq) {
-        if (memberSeq == null) {
+    public List<CheckoutItemDto> findCheckoutItemsByMemberCart(Long memberSeq, List<Long> cartSeqList) {
+        if (memberSeq == null || cartSeqList == null || cartSeqList.isEmpty()) {
             return List.of();
         }
 
@@ -63,7 +63,10 @@ public class OrdersQueryRepositoryImpl implements OrdersQueryRepository {
                 .from(cart)
                 .join(cart.options, options)
                 .join(options.product, product)
-                .where(cart.member.seq.eq(memberSeq))
+                .where(
+                        cart.member.seq.eq(memberSeq),
+                        cart.seq.in(cartSeqList)
+                )
                 .orderBy(cart.seq.asc())
                 .fetch();
 
