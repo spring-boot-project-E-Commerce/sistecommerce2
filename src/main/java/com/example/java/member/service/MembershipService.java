@@ -18,9 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.java.member.entity.Member;
 import com.example.java.member.entity.Memberships;
-import com.example.java.member.entity.MembershipsInfo;
 import com.example.java.member.entity.MembershipsLog;
-import com.example.java.member.repository.MembershipsInfoRepository;
 import com.example.java.member.repository.MembershipsLogRepository;
 import com.example.java.member.repository.MembershipsRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,12 +46,11 @@ public class MembershipService {
 
     private static final String TOSS_BILLING_ISSUE_URL = "https://api.tosspayments.com/v1/billing/authorizations/issue";
     private static final String TOSS_BILLING_URL       = "https://api.tosspayments.com/v1/billing/";
-    private static final long   MEMBERSHIP_INFO_SEQ    = 1L;  // memberships_info 단일 상품 seq
+    public  static final int    MEMBERSHIP_PRICE       = 7900;
 
-    private final MembershipsRepository      membershipsRepository;
-    private final MembershipsLogRepository   membershipsLogRepository;
-    private final MembershipsInfoRepository  membershipsInfoRepository;
-    private final ObjectMapper               objectMapper;
+    private final MembershipsRepository    membershipsRepository;
+    private final MembershipsLogRepository membershipsLogRepository;
+    private final ObjectMapper             objectMapper;
 
     @Value("${toss.secret-key}")
     private String tossSecretKey;
@@ -67,9 +64,7 @@ public class MembershipService {
     }
 
     public int getMembershipPrice() {
-        return membershipsInfoRepository.findById(MEMBERSHIP_INFO_SEQ)
-                .map(MembershipsInfo::getPrice)
-                .orElse(0);
+        return MEMBERSHIP_PRICE;
     }
 
     // -------------------------------------------------------------------------

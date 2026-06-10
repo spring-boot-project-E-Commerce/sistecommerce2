@@ -55,30 +55,41 @@ public class MembershipController {
     }
 
     // -------------------------------------------------------------------------
-    // 가입
+    // 가입 — Toss 빌링 인증 콜백 (GET)
     // -------------------------------------------------------------------------
 
     /**
-     * Toss 위젯에서 카드 등록 완료 후 호출.
-     * authKey + customerKey → 빌링키 발급 → 첫 결제 → DB 저장
+     * Toss requestBillingAuth() 성공 후 리다이렉트되는 콜백.
+     * URL: /mypage/membership/billing/success?authKey=xxx&customerKey=xxx
      */
-    @PostMapping("/join")
-    public String join(@AuthenticationPrincipal CustomUserDetails userDetails,
-                       @RequestParam("authKey") String authKey,
-                       @RequestParam("customerKey") String customerKey,
-                       RedirectAttributes redirectAttributes) {
+    @GetMapping("/billing/success")
+    public String billingSuccess(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                 @RequestParam("authKey") String authKey,
+                                 @RequestParam("customerKey") String customerKey,
+                                 RedirectAttributes redirectAttributes) {
         try {
             Member member = memberRepository.findById(userDetails.getMemberSeq())
                     .orElseThrow(() -> new IllegalStateException("회원 정보를 찾을 수 없습니다."));
 
             membershipService.join(member, authKey, customerKey);
-            redirectAttributes.addFlashAttribute("successMessage", "멤버십 가입이 완료되었습니다.");
+            redirectAttributes.addFlashAttribute("successMessage", "멤버십 가입이 완료되었습니다. 🎉");
 
         } catch (IllegalStateException e) {
             log.warn("멤버십 가입 실패: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
 
+        return "redirect:/mypage/membership";
+    }
+
+    /**
+     * Toss requestBillingAuth() 실패 콜백.
+     */
+    @GetMapping("/billing/fail")
+    public String billingFail(@RequestParam(value = "message", required = false) String message,
+                              RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("errorMessage",
+                "카드 등록에 실패했습니다. " + (message != null ? message : ""));
         return "redirect:/mypage/membership";
     }
 
