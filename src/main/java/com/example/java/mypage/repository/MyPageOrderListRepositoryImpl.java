@@ -30,8 +30,8 @@ import lombok.RequiredArgsConstructor;
 public class MyPageOrderListRepositoryImpl implements MyPageOrderListRepository {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
-    private static final String DELIVERY_READY_COMPANY = "\uBC30\uC1A1 \uC900\uBE44\uC911";
-    private static final String TRACKING_PENDING = "\uBC1C\uAE09\uB300\uAE30";
+    private static final String DELIVERY_READY_COMPANY = "배송 준비중";
+    private static final String TRACKING_PENDING = "발급대기";
     private static final String DELIVERY_READY_STATUS = "READY";
 
     private final JPAQueryFactory queryFactory;
