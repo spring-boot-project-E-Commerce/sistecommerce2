@@ -102,7 +102,9 @@
 
                     <option th:each="opt : *{optionList}"
                             th:value="${opt.seq}"
-                            th:text="${opt.optionName}">
+                            th:text="${opt.optionName}"
+                            th:data-additional-price="${opt.additionalPrice}"
+                            th:data-stock="${opt.stock}">
                         옵션
                     </option>
                 </select>
@@ -129,16 +131,24 @@
                     </button>
                 </div>
 
-                <button type="button"
-                        onclick="addToCart()"
-                        class="flex-1 border-2 border-amber-500 text-amber-600 font-bold py-2.5 text-sm hover:bg-amber-50">
-                    장바구니 담기
-                </button>
+				<button type="button"
+				        id="cartBtn"
+				        onclick="addToCart()"
+				        th:disabled="${product.saleStatus == 'SOLD_OUT' or product.hideYn == 'Y' or product.productStatus == 'DELETED'}"
+				        th:class="${product.saleStatus == 'SOLD_OUT' or product.hideYn == 'Y' or product.productStatus == 'DELETED'}
+				            ? 'flex-1 border-2 border-gray-300 text-gray-400 font-bold py-2.5 text-sm cursor-not-allowed bg-gray-100'
+				            : 'flex-1 border-2 border-amber-500 text-amber-600 font-bold py-2.5 text-sm hover:bg-amber-50'">
+				    장바구니 담기
+				</button>
 
-                <button type="button"
-                        class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 text-sm">
-                    바로구매
-                </button>
+				<button type="button"
+				        id="buyBtn"
+				        onclick="buyNow()"
+				        th:class="${product.saleStatus == 'SOLD_OUT' or product.hideYn == 'Y' or product.productStatus == 'DELETED'}
+				            ? 'flex-1 bg-gray-300 text-gray-500 font-bold py-2.5 text-sm cursor-not-allowed'
+				            : 'flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 text-sm'">
+				    바로구매
+				</button>
             </div>
         </div>
     </div>
@@ -343,7 +353,10 @@
 
         리뷰 조회, 리뷰 수정, 리뷰 삭제 요청 URL에 사용됩니다.
     */
-    const productSeq = /*[[${product.seq}]]*/ 0;
+    const productSeq         = /*[[${product.seq}]]*/ 0;
+    const productName        = /*[[${product.productName}]]*/ '';
+    const productPrice       = /*[[${product.price}]]*/ 0;
+    const productThumbnailUrl = /*[[${product.thumbnailUrl}]]*/ '';
 
     /*
         현재 로그인 회원 번호
@@ -358,6 +371,49 @@
     */
     const currentMemberSeq = /*[[${loginMemberSeq}]]*/ null;
 
+	/*
+	    상품 판매 상태
+
+	    SOLD_OUT이면 품절 상품입니다.
+	    품절 상품은 상세 화면은 볼 수 있지만
+	    바로구매는 할 수 없습니다.
+	*/
+	const productSaleStatus = /*[[${product.saleStatus}]]*/ 'NORMAL';
+	const productHideYn = /*[[${product.hideYn}]]*/ 'N';
+	const productStatus = /*[[${product.productStatus}]]*/ 'NORMAL';
+
+	console.log('productSaleStatus =', productSaleStatus);
+	console.log('productHideYn =', productHideYn);
+	console.log('productStatus =', productStatus);
+	
+	/*
+	    구매 불가 상품 여부 확인
+
+	    SOLD_OUT : 품절
+	    hideYn = Y : 숨김
+	    DELETED : 삭제
+	*/
+	function isBlockedProduct() {
+	    return productSaleStatus === 'SOLD_OUT'
+	        || productHideYn === 'Y'
+	        || productStatus === 'DELETED';
+	}
+
+	/*
+	    바로구매 버튼 클릭 시 실행
+
+	    품절 상품이면 구매 페이지로 이동하지 않고
+	    alert만 표시합니다.
+	*/
+	function buyNow() {
+	    if (isBlockedProduct()) {
+	        alert('구매할 수 없는 상품입니다.');
+	        return;
+	    }
+
+	    alert('바로구매 기능을 연결해주세요.');
+	}
+	
     /*
         상품 찜 버튼 관련 화면 요소입니다.
 
@@ -1480,6 +1536,13 @@
 </script>
 
 <script>
+	
+	function isBlockedProduct() {
+	    return productSaleStatus === 'SOLD_OUT'
+	        || productHideYn === 'Y'
+	        || productStatus === 'DELETED';
+	}
+	
     /*
         장바구니 담기 버튼 클릭 시 실행됩니다.
 
@@ -1487,13 +1550,18 @@
         1. 옵션 선택 여부 확인
         2. 수량 확인
         3. POST /api/cart 요청
-        4. 로그인하지 않은 경우 로그인 페이지로 이동
+        4. 로그인하지 않은 경우 → localStorage에 저장 (비로그인 장바구니)
         5. 성공 시 알림 표시
     */
     function addToCart() {
         const optionsSeq = document.getElementById('optionsSeq').value;
-        const quantity = document.getElementById('quantity').value;
+        const quantity   = document.getElementById('quantity').value;
 
+		if (isBlockedProduct()) {
+		    alert('구매할 수 없는 상품입니다.');
+		    return;
+		}
+		
         if (!optionsSeq) {
             alert('옵션을 선택해주세요.');
             return;
@@ -1506,13 +1574,11 @@
 
         fetch('/api/cart', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
             body: JSON.stringify({
                 optionsSeq: Number(optionsSeq),
-                quantity: Number(quantity)
+                quantity:   Number(quantity)
             })
         })
         .then(async function (res) {
@@ -1520,8 +1586,33 @@
             const message = await res.text();
 
             if (res.status === 401) {
-                alert(message || '로그인이 필요합니다.');
-                location.href = '/member/login';
+                // 비로그인 → localStorage에 저장
+                const selectEl  = document.getElementById('optionsSeq');
+                const optionEl  = selectEl.options[selectEl.selectedIndex];
+                const addPrice  = parseInt(optionEl.dataset.additionalPrice || '0', 10);
+                const stock     = parseInt(optionEl.dataset.stock || '0', 10);
+                const optName   = optionEl.text;
+                const qty       = Number(quantity);
+
+                const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
+                const existing  = guestCart.find(i => i.optionsSeq === Number(optionsSeq));
+
+                if (existing) {
+                    existing.quantity = Math.min(existing.quantity + qty, stock);
+                } else {
+                    guestCart.push({
+                        optionsSeq:      Number(optionsSeq),
+                        quantity:        qty,
+                        productName:     productName,
+                        price:           productPrice,
+                        thumbnailUrl:    productThumbnailUrl,
+                        optionName:      optName,
+                        additionalPrice: addPrice,
+                        stock:           stock
+                    });
+                }
+                localStorage.setItem('guestCart', JSON.stringify(guestCart));
+                alert('장바구니에 담겼습니다.\n로그인 후 자동으로 반영됩니다.');
                 return;
             }
 
