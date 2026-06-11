@@ -9,8 +9,27 @@
 
     <h2 class="text-xl font-black bg-gray-100 px-5 py-4">장바구니</h2>
 
+    <!-- ── 비로그인 게스트 장바구니 ── -->
+    <div th:if="${guestMode}" id="guestCartSection">
+        <div class="bg-amber-50 border border-amber-200 px-5 py-3 text-sm text-amber-800 font-semibold flex items-center gap-2">
+            <span>⚠️</span>
+            <span>로그인 후 장바구니가 자동으로 저장됩니다.</span>
+            <a href="/member/login" class="ml-auto underline text-amber-700 hover:text-amber-900">로그인하기</a>
+        </div>
+
+        <div class="bg-white border border-gray-200 border-t-0" id="guestCartList">
+            <!-- JS가 localStorage 항목을 렌더링 -->
+        </div>
+
+        <div id="guestTotalBar" class="hidden bg-white border border-gray-200 border-t-0 px-5 py-4 flex justify-between items-center">
+            <span class="text-sm text-gray-500 font-semibold">선택 상품 합계</span>
+            <span id="guestTotalPrice" class="text-xl font-black text-slate-900">0원</span>
+        </div>
+    </div>
+
     <!-- 체크한 cartSeq만 /order/checkout으로 전달 -->
-    <form th:action="@{/order/checkout}"
+    <form th:if="${!guestMode}"
+          th:action="@{/order/checkout}"
           method="get"
           id="cartOrderForm"
           onsubmit="return validateCartSelection()">
@@ -112,6 +131,107 @@
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 
 <script>
+    // ── 비로그인 게스트 장바구니 렌더링 ─────────────────────────
+    (function renderGuestCart() {
+        const section = document.getElementById('guestCartSection');
+        if (!section) return; // 로그인 상태면 없음
+
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
+        const listEl    = document.getElementById('guestCartList');
+        const totalBar  = document.getElementById('guestTotalBar');
+
+        if (guestCart.length === 0) {
+            listEl.innerHTML = `
+                <div class="p-10 text-center text-gray-500">
+                    <p class="text-sm font-semibold">장바구니에 담긴 상품이 없습니다.</p>
+                    <a href="/products" class="inline-block mt-4 bg-slate-900 hover:bg-slate-800 text-white font-bold px-8 py-3 text-sm">상품 보러가기</a>
+                </div>`;
+            return;
+        }
+
+        totalBar.classList.remove('hidden');
+
+        guestCart.forEach((item, idx) => {
+            const unitPrice = item.price + item.additionalPrice;
+            const row = document.createElement('div');
+            row.className = 'guest-row flex items-center gap-4 p-5 border-b border-gray-100';
+            row.dataset.idx       = idx;
+            row.dataset.unitPrice = unitPrice;
+            row.dataset.stock     = item.stock;
+            row.innerHTML = `
+                <input type="checkbox" checked class="guest-check w-5 h-5 accent-amber-500" onchange="recalcGuestTotal()">
+                <div class="w-24 h-24 bg-gray-50 shrink-0 overflow-hidden">
+                    <img src="${item.thumbnailUrl || '/src/images/product/default.png'}" alt="" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold">${item.productName}</h4>
+                    <p class="text-xs text-gray-500 mt-1">옵션: ${item.optionName}</p>
+                    <div class="mt-2 flex items-center border border-gray-300 w-fit">
+                        <button type="button" class="g-minus px-2.5 py-1 text-gray-500 hover:bg-gray-50">−</button>
+                        <input type="text" value="${item.quantity}" class="g-qty w-10 text-center text-sm border-x border-gray-300 py-1" readonly>
+                        <button type="button" class="g-plus px-2.5 py-1 text-gray-500 hover:bg-gray-50">+</button>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="g-total text-lg font-black">${(unitPrice * item.quantity).toLocaleString('ko-KR')}원</p>
+                    <button type="button" class="g-delete mt-2 text-gray-300 hover:text-red-500">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                </div>`;
+            listEl.appendChild(row);
+
+            row.querySelector('.g-minus').addEventListener('click', () => changeGuestQty(row, -1));
+            row.querySelector('.g-plus' ).addEventListener('click', () => changeGuestQty(row, +1));
+            row.querySelector('.g-delete').addEventListener('click', () => deleteGuestItem(row));
+        });
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        recalcGuestTotal();
+    })();
+
+    function getGuestCart() { return JSON.parse(localStorage.getItem('guestCart') || '[]'); }
+    function saveGuestCart(cart) { localStorage.setItem('guestCart', JSON.stringify(cart)); }
+
+    function recalcGuestTotal() {
+        let total = 0;
+        document.querySelectorAll('.guest-row').forEach(row => {
+            if (row.querySelector('.guest-check').checked) {
+                total += parseInt(row.dataset.unitPrice, 10) * parseInt(row.querySelector('.g-qty').value, 10);
+            }
+        });
+        const el = document.getElementById('guestTotalPrice');
+        if (el) el.textContent = total.toLocaleString('ko-KR') + '원';
+    }
+
+    function changeGuestQty(row, delta) {
+        const idx   = parseInt(row.dataset.idx, 10);
+        const stock = parseInt(row.dataset.stock, 10);
+        const input = row.querySelector('.g-qty');
+        let   qty   = parseInt(input.value, 10) + delta;
+        if (qty < 1) return;
+        if (qty > stock) { alert('재고(' + stock + '개)를 초과할 수 없습니다.'); return; }
+
+        const cart = getGuestCart();
+        cart[idx].quantity = qty;
+        saveGuestCart(cart);
+        input.value = qty;
+        row.querySelector('.g-total').textContent =
+            (parseInt(row.dataset.unitPrice, 10) * qty).toLocaleString('ko-KR') + '원';
+        recalcGuestTotal();
+    }
+
+    function deleteGuestItem(row) {
+        if (!confirm('장바구니에서 삭제하시겠습니까?')) return;
+        const idx  = parseInt(row.dataset.idx, 10);
+        const cart = getGuestCart();
+        cart.splice(idx, 1);
+        saveGuestCart(cart);
+        row.remove();
+        // 삭제 후 idx 재정렬
+        document.querySelectorAll('.guest-row').forEach((r, i) => r.dataset.idx = i);
+        recalcGuestTotal();
+    }
+
     // ── 합계 재계산 ──────────────────────────────────────────
     function recalcTotal() {
         let total = 0;
