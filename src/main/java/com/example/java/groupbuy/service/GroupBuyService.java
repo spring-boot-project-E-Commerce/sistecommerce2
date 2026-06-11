@@ -486,6 +486,25 @@ public class GroupBuyService {
     }
 
     /**
+     * 공구 시작 처리 (스케줄러가 시작 시각 지난 예정 공구마다 호출). SCHEDULED → ONGOING.
+     *
+     * @param groupBuySeq 시작할 공구 seq
+     */
+    @Transactional
+    public void open(Long groupBuySeq) {
+        GroupBuy groupBuy = groupBuyRepository.findById(groupBuySeq).orElse(null);
+        // SCHEDULED 공구만 시작. status 변경으로 다음 틱에는 자동으로 걸러져 중복 처리가 방지된다.
+        if (groupBuy == null || groupBuy.getStatus() != GroupBuyStatus.SCHEDULED) {
+            return;
+        }
+        // 시작 시각 도래 방어 (스케줄러가 거르지만 직접 호출 대비)
+        if (LocalDateTime.now().isBefore(groupBuy.getStartAt())) {
+            return;
+        }
+        groupBuy.open(); // SCHEDULED → ONGOING (변경감지로 UPDATE)
+    }
+
+    /**
      * 옵션별 실제 공구 결제가 = 공구 기준 할인가(final_price) + 그 옵션의 추가금(options.additional_price).
      * 팀 합의: 제일 싼 옵션을 기준가로 두고 additional_price(0 이상)로 옵션별 가격차를 표현한다.
      * 결제·환불에서 공통으로 쓴다(참여/승격결제/취소/무산환불 모두 이 가격 기준).
