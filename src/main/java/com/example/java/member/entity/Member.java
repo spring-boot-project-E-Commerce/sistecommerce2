@@ -169,4 +169,39 @@ public class Member {
         this.status        = com.example.java.member.constant.MemberStatus.WITHDRAWN;
         this.updatedAt     = java.time.LocalDateTime.now();
     }
+
+    /**
+     * 휴면 전환: status 1→2 + 민감 개인정보 제거(분리보관 후 null).
+     * 식별자(username/nickname)와 password 는 유지(로그인·복원에 필요).
+     */
+    public void enterDormant() {
+        this.name          = null;
+        this.email         = null;
+        this.phone         = null;
+        this.ci            = null;
+        this.di            = null;
+        this.zipcode       = null;
+        this.address       = null;
+        this.addressDetail = null;
+        this.gender        = null;
+        this.birth         = null;
+        this.status        = com.example.java.member.constant.MemberStatus.DORMANT;
+        this.updatedAt     = java.time.LocalDateTime.now();
+    }
+
+    /** 휴면 복원: status 2→1 + 분리보관 스냅샷에서 민감정보 복구 */
+    public void restoreFromDormant(MemberDormant dormant) {
+        this.name          = dormant.getName();
+        this.email         = dormant.getEmail();
+        this.phone         = dormant.getPhone();
+        this.ci            = dormant.getCi();
+        this.di            = dormant.getDi();
+        this.zipcode       = dormant.getZipcode();
+        this.address       = dormant.getAddress();
+        this.addressDetail = dormant.getAddressDetail();
+        this.gender        = dormant.getGender();
+        this.birth         = dormant.getBirth();
+        this.status        = com.example.java.member.constant.MemberStatus.ACTIVE;
+        this.updatedAt     = java.time.LocalDateTime.now();
+    }
 }
