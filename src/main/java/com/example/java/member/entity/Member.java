@@ -131,4 +131,42 @@ public class Member {
         this.status = status;
 
     }
+
+    /** 탈퇴 신청: status 1→4(탈퇴보류중), 신청일시 기록 */
+    public void markWithdrawalRequested() {
+        this.status = com.example.java.member.constant.MemberStatus.WITHDRAWAL_PENDING;
+        this.withdrawalRequestedAt = java.time.LocalDateTime.now();
+        this.updatedAt = java.time.LocalDateTime.now();
+    }
+
+    /** 탈퇴 복구: status 4→1(활성), 신청일시 해제 */
+    public void restoreActive() {
+        this.status = com.example.java.member.constant.MemberStatus.ACTIVE;
+        this.withdrawalRequestedAt = null;
+        this.updatedAt = java.time.LocalDateTime.now();
+    }
+
+    /**
+     * 탈퇴 확정: status 4→5(탈퇴) + 민감 개인정보 비가역 마스킹.
+     * seq/row 는 유지(구매이력 연결 보존). 원본은 member_withdrawal 에 분리보관됨.
+     * UNIQUE NOT NULL 컬럼(username/nickname)은 seq 기반 익명값으로, 나머지 PII 는 null 처리.
+     */
+    public void maskForWithdrawal() {
+        this.username      = com.example.java.member.util.MaskingUtil.anonymized("WD", this.seq);
+        this.nickname      = com.example.java.member.util.MaskingUtil.anonymized("탈퇴회원", this.seq);
+        this.password      = null;
+        this.name          = null;
+        this.email         = null;
+        this.phone         = null;
+        this.ci            = null;
+        this.di            = null;
+        this.zipcode       = null;
+        this.address       = null;
+        this.addressDetail = null;
+        this.gender        = null;
+        this.birth         = null;
+        this.totp          = null;
+        this.status        = com.example.java.member.constant.MemberStatus.WITHDRAWN;
+        this.updatedAt     = java.time.LocalDateTime.now();
+    }
 }
