@@ -14,6 +14,7 @@
 	<div class="card bg-base-100 shadow-xl">
     <div class="card-body space-y-10">
         <!-- 상품 정보 -->
+        <form action="/admin/group-buys" method="POST">
         <div>
             <div class="flex items-center gap-2 mb-4">
                 <h2 class="font-bold text-lg">상품 정보</h2>
@@ -64,43 +65,33 @@
 		    <div class="flex items-center gap-2 mb-4">
 		        <h2 class="font-bold text-lg">옵션 정보</h2>
 		    </div>
-		
 		    <div class="space-y-4">
-		
-		        <div th:each="option : ${dto.options}">
-		
-		            <input type="hidden"
-		                   name="optionSeqs"
-		                   th:value="${option.optionSeq}">
-		
-		            <div class="grid grid-cols-3 gap-4">
-		
-		                <div>
-		                    <label class="label-text">옵션명</label>
-		                    <input class="input input-bordered w-full"
-		                           th:value="${option.optionName}"
-		                           readonly>
-		                </div>
-		
-		                <div>
-		                    <label class="label-text">추가금액</label>
-		                    <input class="input input-bordered w-full"
-		                           th:value="${option.additionalPrice}"
-		                           readonly>
-		                </div>
-		
-		                <div>
-		                    <label class="label-text">공동구매 수량</label>
-		                    <input type="number"
-		                           name="orderQty"
-		                           min="1"
-		                           class="input input-bordered w-full order-qty">
-		                </div>
-		
-		            </div>
-		
-		        </div>
-		
+		        <div th:each="option, stat : ${dto.options}">				
+				    <input type="hidden"
+				           th:name="|options[${stat.index}].optionSeq|"
+				           th:value="${option.optionSeq}">
+				    <div class="grid grid-cols-3 gap-4">
+				        <div>
+				            <label class="label-text">옵션명</label>
+				            <input class="input input-bordered w-full"
+				                   th:value="${option.optionName}"
+				                   readonly>
+				        </div>
+				        <div>
+				            <label class="label-text">추가금액</label>
+				            <input class="input input-bordered w-full"
+				                   th:value="${option.additionalPrice}"
+				                   readonly>
+				        </div>
+				        <div>
+				            <label class="label-text">공동구매 수량</label>
+				            <input type="number"
+				                   th:name="|options[${stat.index}].orderQty|"
+				                   min="1"
+				                   class="input input-bordered w-full order-qty">
+				        </div>
+				    </div>
+				</div>
 		    </div>
 		</div>
 
@@ -125,13 +116,13 @@
                 </div>
                 <div>
                     <label class="label-text">공동구매 시작일</label>
-                    <input type="date"
+                    <input type="datetime-local"
                            name="startAt"
                            class="input input-bordered w-full" />
                 </div>
                 <div>
                     <label class="label-text">공동구매 종료일</label>
-                    <input type="date"
+                    <input type="datetime-local"
                            name="endAt"
                            class="input input-bordered w-full" />
                 </div>
@@ -158,9 +149,11 @@
                 </div>
             </div>
         </div>
+        <input type="hidden" name="productSeq" th:value="${dto.productSeq}">
+		<input type="hidden" name="originalPrice" th:value="${dto.originalPrice}">
 
         <!-- 버튼 -->
-        <div class="flex justify-end gap-2">
+        <div class="flex justify-end gap-2 pt-4">
             <button type="button"
                     class="btn btn-outline">
                 취소
@@ -170,6 +163,7 @@
                 공동구매 등록
             </button>
         </div>
+        </form>
 
     </div>
 </div>
