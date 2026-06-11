@@ -91,4 +91,12 @@ public class GroupBuy {
         this.status = GroupBuyStatus.FAILED;
         this.finishedAt = finishedAt;
     }
+
+    /**
+     * 관리자 강제 중단: ONGOING/SCHEDULED → STOPPED
+     */
+    public void forceStop(LocalDateTime finishedAt) {
+        this.status = GroupBuyStatus.STOPPED;
+        this.finishedAt = finishedAt;
+    }
 }
