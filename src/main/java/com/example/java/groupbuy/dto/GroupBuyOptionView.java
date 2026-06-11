@@ -19,16 +19,24 @@ public class GroupBuyOptionView {
     private Long optionsSeq;
     private String label;       // 옵션 표시명 (예: "블랙", "270", "그레이") — Options.getDisplayName()
     private boolean soldOut;
+    private Integer finalPrice;  // 옵션별 실제 공구가 = 공구 기준 할인가 + 그 옵션의 additional_price
 
-    public static GroupBuyOptionView from(GroupBuyOptions entity) {
+    /**
+     * @param entity         공구 옵션
+     * @param baseFinalPrice 공구 기준 할인가(group_buy.final_price). 여기에 옵션 추가금을 더해 옵션별 가격을 만든다.
+     */
+    public static GroupBuyOptionView from(GroupBuyOptions entity, int baseFinalPrice) {
         Options opt = entity.getOptions();
         // 점유(확정+결제대기) 인원이 발주가능수량에 도달하면 매진
         boolean soldOut = entity.getOccupiedCount() >= entity.getOrderQty();
+        // 옵션 추가금(0 이상). 제일 싼 옵션은 0, 비싼 옵션은 양수.
+        int additional = (opt != null && opt.getAdditionalPrice() != null) ? opt.getAdditionalPrice() : 0;
         return GroupBuyOptionView.builder()
                 .optionsSeq(opt != null ? opt.getSeq() : null)
                 // 색상/사이즈 등 flat 컬럼 중 값이 있는 것들을 " / "로 조합한 표시명
                 .label(opt != null ? opt.getDisplayName() : null)
                 .soldOut(soldOut)
+                .finalPrice(baseFinalPrice + additional)  // 공구 기준가 + 옵션 추가금
                 .build();
     }
 }
