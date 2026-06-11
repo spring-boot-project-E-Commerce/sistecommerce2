@@ -15,6 +15,14 @@ import com.example.java.orders.repository.PaymentRepository;
 import com.example.java.orders.repository.RefundRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.java.product.entity.Options;
+import com.example.java.product.repository.OptionsRepository;
+import com.example.java.stockhistory.entity.StockHistory;
+import com.example.java.stockhistory.enums.StockHistorySourceType;
+import com.example.java.stockhistory.enums.StockHistoryType;
+import com.example.java.stockhistory.repository.StockHistoryRepository;
+
+import java.util.LinkedHashMap;
 
 import lombok.RequiredArgsConstructor;
 
@@ -52,6 +60,8 @@ public class PaymentService {
     private final DeliveryRepository deliveryRepository;
     private final RefundRepository refundRepository;
     private final ObjectMapper objectMapper;
+    private final OptionsRepository optionsRepository;
+    private final StockHistoryRepository stockHistoryRepository;
 
     @Value("${toss.secret-key}")
     private String tossSecretKey;
@@ -100,6 +110,22 @@ public class PaymentService {
         if (paymentRepository.findByExternalPaymentId(paymentKey).isPresent()) {
             return;
         }
+
+        /*
+            결제 승인 전에 주문상품 기준으로 재고를 잠그고 차감한다.
+
+            이 위치에서 처리하는 이유:
+            - 재고가 부족하면 Toss confirm을 호출하지 않는다.
+            - 같은 상품을 동시에 결제해도 options row를 잠가서 중복 차감을 방지한다.
+            - Toss confirm 실패 시 현재 트랜잭션이 롤백되므로 재고 차감도 롤백된다.
+         */
+        List<OrderItem> orderItems = orderItemRepository.findByOrderSeq(order.getSeq());
+
+        if (orderItems.isEmpty()) {
+            throw new IllegalStateException("주문상품 정보가 없습니다. orderSeq=" + order.getSeq());
+        }
+
+        decreaseStockForOrderItems(orderItems, order.getSeq());
 
         JsonNode tossResponse = requestTossConfirm(paymentKey, orderId, amount);
 
@@ -321,6 +347,11 @@ public class PaymentService {
             cancelAmount를 보내므로 선택 상품 금액만 취소된다.
          */
         requestTossCancel(payment.getExternalPaymentId(), reason, cancelAmount);
+
+        /*
+            결제 취소 성공 후 취소한 주문상품 수량만큼 재고를 복구한다.
+         */
+        increaseStockForOrderItems(cancelItems, order.getSeq());
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -731,5 +762,134 @@ public class PaymentService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+    
+    /**
+     * 결제 완료 시 주문상품 수량만큼 옵션 재고를 감소시킨다.
+     */
+    private void decreaseStockForOrderItems(List<OrderItem> orderItems, Long orderSeq) {
+        LinkedHashMap<Long, Integer> quantityByOptionsSeq = aggregateQuantityByOptionsSeq(orderItems);
+
+        for (Map.Entry<Long, Integer> entry : quantityByOptionsSeq.entrySet()) {
+            Long optionsSeq = entry.getKey();
+            int decreaseQuantity = entry.getValue();
+
+            Options options = optionsRepository.findBySeqForUpdate(optionsSeq)
+                    .orElseThrow(() -> new IllegalStateException("옵션 정보를 찾을 수 없습니다. optionsSeq=" + optionsSeq));
+
+            int beforeStock = nullToZero(options.getStock());
+
+            if (beforeStock < decreaseQuantity) {
+                throw new IllegalStateException(
+                        "재고가 부족합니다. optionsSeq="
+                                + optionsSeq
+                                + ", 현재재고="
+                                + beforeStock
+                                + ", 구매수량="
+                                + decreaseQuantity
+                );
+            }
+
+            options.decreaseStock(decreaseQuantity);
+
+            int afterStock = nullToZero(options.getStock());
+
+            saveStockHistory(
+                    options,
+                    StockHistoryType.OUT,
+                    "주문 결제 재고 차감",
+                    decreaseQuantity,
+                    beforeStock,
+                    afterStock,
+                    orderSeq,
+                    StockHistorySourceType.주문
+            );
+        }
+    }
+
+    /**
+     * 주문취소 또는 부분취소 시 취소한 주문상품 수량만큼 옵션 재고를 복구한다.
+     */
+    private void increaseStockForOrderItems(List<OrderItem> orderItems, Long orderSeq) {
+        LinkedHashMap<Long, Integer> quantityByOptionsSeq = aggregateQuantityByOptionsSeq(orderItems);
+
+        for (Map.Entry<Long, Integer> entry : quantityByOptionsSeq.entrySet()) {
+            Long optionsSeq = entry.getKey();
+            int increaseQuantity = entry.getValue();
+
+            Options options = optionsRepository.findBySeqForUpdate(optionsSeq)
+                    .orElseThrow(() -> new IllegalStateException("옵션 정보를 찾을 수 없습니다. optionsSeq=" + optionsSeq));
+
+            int beforeStock = nullToZero(options.getStock());
+
+            options.increaseStock(increaseQuantity);
+
+            int afterStock = nullToZero(options.getStock());
+
+            saveStockHistory(
+                    options,
+                    StockHistoryType.IN,
+                    "주문 취소 재고 복구",
+                    increaseQuantity,
+                    beforeStock,
+                    afterStock,
+                    orderSeq,
+                    StockHistorySourceType.주문
+            );
+        }
+    }
+
+    /**
+     * 같은 옵션이 주문상품에 여러 번 들어간 경우를 대비해서 optionsSeq별 수량을 합산한다.
+     */
+    private LinkedHashMap<Long, Integer> aggregateQuantityByOptionsSeq(List<OrderItem> orderItems) {
+        LinkedHashMap<Long, Integer> quantityByOptionsSeq = new LinkedHashMap<>();
+
+        for (OrderItem item : orderItems) {
+            if (item.getOptionsSeq() == null) {
+                throw new IllegalStateException("주문상품의 옵션 번호가 없습니다. orderItemSeq=" + item.getSeq());
+            }
+
+            int quantity = nullToZero(item.getQuantity());
+
+            if (quantity <= 0) {
+                throw new IllegalStateException("주문상품 수량이 올바르지 않습니다. orderItemSeq=" + item.getSeq());
+            }
+
+            quantityByOptionsSeq.merge(
+                    item.getOptionsSeq(),
+                    quantity,
+                    Integer::sum
+            );
+        }
+
+        return quantityByOptionsSeq;
+    }
+
+    /**
+     * 재고 변동 이력을 stock_history 테이블에 저장한다.
+     */
+    private void saveStockHistory(Options options,
+                                  StockHistoryType type,
+                                  String reason,
+                                  int quantity,
+                                  int beforeStock,
+                                  int afterStock,
+                                  Long sourceSeq,
+                                  StockHistorySourceType sourceType) {
+
+        StockHistory stockHistory = StockHistory.builder()
+                .options(options)
+                .type(type)
+                .reason(reason)
+                .quantity(quantity)
+                .beforeStock(beforeStock)
+                .afterStock(afterStock)
+                .sourceSeq(sourceSeq)
+                .sourceType(sourceType)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        stockHistoryRepository.save(stockHistory);
     }
 }

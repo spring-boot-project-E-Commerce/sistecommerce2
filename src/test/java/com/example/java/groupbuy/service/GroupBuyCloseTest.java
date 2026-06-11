@@ -1,9 +1,7 @@
 package com.example.java.groupbuy.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -125,7 +123,7 @@ class GroupBuyCloseTest {
         assertThat(groupBuyStatus(gb)).as("공구 확정").isEqualTo(GroupBuyStatus.CONFIRMED);
         assertThat(statusOf(gb, 1L)).as("참여자 확정").isEqualTo(ParticipationStatus.CONFIRMED);
         assertThat(statusOf(gb, 2L)).isEqualTo(ParticipationStatus.CONFIRMED);
-        verify(paymentPort, times(0)).cancel(anyLong(), anyInt());
+        verify(paymentPort, times(0)).refund(anyLong());
     }
 
     @Test
@@ -143,8 +141,7 @@ class GroupBuyCloseTest {
         assertThat(groupBuyStatus(gb)).as("공구 무산").isEqualTo(GroupBuyStatus.FAILED);
         assertThat(statusOf(gb, 1L)).as("참여자 무산").isEqualTo(ParticipationStatus.FAILED);
         assertThat(statusOf(gb, 2L)).isEqualTo(ParticipationStatus.FAILED);
-        verify(paymentPort, times(1)).cancel(eq(1L), anyInt());
-        verify(paymentPort, times(1)).cancel(eq(2L), anyInt());
+        verify(paymentPort, times(2)).refund(anyLong()); // 결제완료 2명 각각 환불 = 총 2회
     }
 
     @Test
@@ -162,6 +159,6 @@ class GroupBuyCloseTest {
         // then: 결제완료 2명으로 확정 판정(PAYMENT_PENDING 제외) / 결제대기자는 EXPIRED, 환불 없음
         assertThat(groupBuyStatus(gb)).as("결제완료 2명으로 확정").isEqualTo(GroupBuyStatus.CONFIRMED);
         assertThat(statusOf(gb, 3L)).as("결제대기자는 EXPIRED").isEqualTo(ParticipationStatus.EXPIRED);
-        verify(paymentPort, times(0)).cancel(eq(3L), anyInt()); // 결제 전이라 환불 없음
+        verify(paymentPort, times(0)).refund(anyLong()); // 확정이라 환불 없음(결제대기자 포함 아무도 환불 안 됨)
     }
 }

@@ -1,7 +1,7 @@
 package com.example.java.groupbuy.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 
 import java.sql.Timestamp;
@@ -85,7 +85,7 @@ class GroupBuyOptionPriceTest {
         groupBuyService.participate(ids[0], ids[1], 1L);
 
         // then: 결제액 = 8000 + 3000 = 11000
-        verify(paymentPort).pay(eq(1L), eq(11000));
+        verify(paymentPort).pay(argThat(c -> c.memberSeq() == 1L && c.finalPrice() == 11000));
     }
 
     @Test
@@ -96,7 +96,7 @@ class GroupBuyOptionPriceTest {
         groupBuyService.participate(ids[0], ids[1], 2L);
 
         // then: 결제액 = 8000 + 0 = 8000
-        verify(paymentPort).pay(eq(2L), eq(8000));
+        verify(paymentPort).pay(argThat(c -> c.memberSeq() == 2L && c.finalPrice() == 8000));
     }
 
     @Test
