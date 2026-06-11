@@ -1,5 +1,6 @@
 package com.example.java.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -9,10 +10,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.example.java.member.security.CustomOAuth2UserService;
+import com.example.java.member.security.CustomRememberMeServices;
 import com.example.java.member.security.FormLoginFailureHandler;
 import com.example.java.member.security.FormLoginSuccessHandler;
 import com.example.java.member.security.OAuth2FailureHandler;
 import com.example.java.member.security.OAuth2SuccessHandler;
+import com.example.java.member.service.MemberSecurityService;
+import com.example.java.member.service.RememberMeTokenService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,8 +31,25 @@ public class SecurityConfig {
     private final OAuth2SuccessHandler oauth2SuccessHandler;
     private final OAuth2FailureHandler oauth2FailureHandler;
 
+    /**
+     * remember-me 서명 키. services 와 rememberMe DSL 양쪽이 동일해야
+     * RememberMeAuthenticationToken 검증이 통과한다.
+     * 운영에서는 application-secret.yml 등으로 외부화 권장.
+     */
+    @Value("${security.remember-me.key:shop-remember-me-key-change-in-prod}")
+    private String rememberMeKey;
+
+    /** remember_me_token 기반 커스텀 자동로그인 서비스 */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public CustomRememberMeServices customRememberMeServices(
+            MemberSecurityService memberSecurityService,
+            RememberMeTokenService rememberMeTokenService) {
+        return new CustomRememberMeServices(rememberMeKey, memberSecurityService, rememberMeTokenService);
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           CustomRememberMeServices customRememberMeServices) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
                 // 정적 리소스 허용 (/src/** : static/src/images/... 로컬 이미지)
@@ -68,6 +89,10 @@ public class SecurityConfig {
                 )
                 .successHandler(oauth2SuccessHandler)
                 .failureHandler(oauth2FailureHandler)
+            )
+            .rememberMe(rm -> rm
+                .key(rememberMeKey)                              // services 와 동일 키 필수
+                .rememberMeServices(customRememberMeServices)    // remember_me_token 기반 커스텀 서비스
             )
             .logout(logout -> logout
                 .logoutUrl("/member/logout")
