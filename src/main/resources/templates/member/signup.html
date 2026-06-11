@@ -100,12 +100,24 @@
                         <input type="email" id="email" name="email"
                             class="flex-1 border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
                             placeholder="이메일을 입력하세요" required />
-                        <button type="button"
+                        <button type="button" id="email-send-btn" onclick="sendEmailCode()"
                             class="shrink-0 bg-slate-900 hover:bg-amber-500 text-white hover:text-slate-900 text-xs font-bold px-4 py-2.5 transition-colors">
                             인증메일 발송
                         </button>
                     </div>
                     <p id="email-msg" class="text-xs mt-1"></p>
+
+                    <!-- 인증번호 입력 (발송 후 표시) -->
+                    <div id="email-code-row" class="flex gap-2 mt-2 hidden">
+                        <input type="text" id="email-code" maxlength="6" inputmode="numeric"
+                            class="flex-1 border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                            placeholder="인증번호 6자리" />
+                        <button type="button" id="email-verify-btn" onclick="verifyEmailCode()"
+                            class="shrink-0 bg-slate-900 hover:bg-amber-500 text-white hover:text-slate-900 text-xs font-bold px-4 py-2.5 transition-colors">
+                            인증확인
+                        </button>
+                    </div>
+                    <p id="email-code-msg" class="text-xs mt-1"></p>
                 </div>
 
                 <!-- 전화번호 -->
@@ -291,8 +303,61 @@
             });
     }
 
-    // 이메일 실시간 검사
+    // ── 이메일 인증 ─────────────────────────────────
+    let emailVerified = false;
+
+    function sendEmailCode() {
+        const email = document.getElementById('email').value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setMsg('email-msg', '올바른 이메일을 입력해주세요.', false);
+            return;
+        }
+        const btn = document.getElementById('email-send-btn');
+        btn.disabled = true;
+        fetch('/api/member/email/send-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ email })
+        })
+        .then(r => r.json())
+        .then(data => {
+            setMsg('email-msg', data.message, !!data.success);
+            if (data.success) {
+                document.getElementById('email-code-row').classList.remove('hidden');
+            }
+        })
+        .catch(() => setMsg('email-msg', '발송 중 오류가 발생했습니다.', false))
+        .finally(() => { btn.disabled = false; });
+    }
+
+    function verifyEmailCode() {
+        const email = document.getElementById('email').value.trim();
+        const code = document.getElementById('email-code').value.trim();
+        if (!code) { setMsg('email-code-msg', '인증번호를 입력해주세요.', false); return; }
+        fetch('/api/member/email/verify-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ email, code })
+        })
+        .then(r => r.json())
+        .then(data => {
+            emailVerified = !!data.verified;
+            setMsg('email-code-msg', data.message, emailVerified);
+            if (emailVerified) {
+                document.getElementById('email').readOnly = true;
+                document.getElementById('email-code').readOnly = true;
+                document.getElementById('email-send-btn').disabled = true;
+                document.getElementById('email-verify-btn').disabled = true;
+            }
+        })
+        .catch(() => setMsg('email-code-msg', '확인 중 오류가 발생했습니다.', false));
+    }
+
+    // 이메일 실시간 검사 + 변경 시 인증상태 초기화
     document.getElementById('email').addEventListener('input', function () {
+        emailVerified = false;
+        document.getElementById('email-code-row').classList.add('hidden');
+        setMsg('email-code-msg', '', true);
         const val = this.value;
         const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!regex.test(val)) {
@@ -350,6 +415,11 @@
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             e.preventDefault();
             alert('올바른 이메일 형식이 아닙니다.');
+            return;
+        }
+        if (!emailVerified) {
+            e.preventDefault();
+            alert('이메일 인증을 완료해주세요.');
             return;
         }
         if (!/^010-\d{4}-\d{4}$/.test(phone)) {
