@@ -19,6 +19,7 @@ import com.example.java.groupbuy.entity.GroupBuyStatus;
 import com.example.java.groupbuy.entity.Participation;
 import com.example.java.groupbuy.entity.ParticipationStatus;
 import com.example.java.groupbuy.entity.WaitingQueue;
+import com.example.java.groupbuy.payment.GroupBuyPaymentCommand;
 import com.example.java.groupbuy.payment.GroupBuyPaymentPort;
 import com.example.java.groupbuy.repository.GroupBuyOptionsRepository;
 import com.example.java.groupbuy.repository.GroupBuyRepository;
@@ -213,18 +214,18 @@ public class GroupBuyService {
         option.occupy();
         // 명시적 save 불필요: 락으로 조회한 option은 영속 상태라 commit 시 변경감지로 UPDATE 됨.
 
-        // 결제(현재 스텁: 항상 성공). 실패 시 예외 → 트랜잭션 롤백으로 점유도 원복
-        // 옵션별 가격 = 공구 기준 할인가 + 그 옵션의 추가금(additional_price)
-        paymentPort.pay(memberSeq, optionFinalPrice(groupBuy, option));
-
-        // 참여 INSERT (정규 참여라 paymentDeadline/promotedAt은 null)
-        participationRepository.save(Participation.builder()
+        // 참여 INSERT 먼저 (정규 참여라 paymentDeadline/promotedAt은 null).
+        // 결제가 생성할 order_item.participation_seq 연결을 위해 결제 전에 참여 seq가 있어야 한다.
+        Participation participation = participationRepository.save(Participation.builder()
                 .groupBuy(groupBuy)
                 .groupBuyOptions(option)
                 .memberSeq(memberSeq)
                 .status(ParticipationStatus.PARTICIPATING)
                 .createdAt(LocalDateTime.now())
                 .build());
+
+        // 결제(현재 스텁: 항상 성공). 실패 시 예외 → 트랜잭션 롤백으로 참여 INSERT/점유도 함께 원복
+        paymentPort.pay(buildPaymentCommand(groupBuy, option, participation.getSeq(), memberSeq));
 
         return ParticipateResult.PARTICIPATED;
     }
@@ -281,8 +282,8 @@ public class GroupBuyService {
 
         // 5) 취소 확정 + 환불 (위 상태검사로 환불은 1회만 보장됨)
         participation.cancel(); // status → CANCELLED (변경감지로 UPDATE)
-        // 환불액 = 참여 시 낸 옵션별 가격(공구가 + 그 옵션 추가금). participation의 옵션으로 역산.
-        paymentPort.cancel(memberSeq, optionFinalPrice(groupBuy, option));
+        // 환불 = participationSeq로 원주문(order_item)을 찾아 PG 취소. 금액은 order_item.final_price 스냅샷 사용(역산 X).
+        paymentPort.refund(participation.getSeq());
 
         // 6) 점유 복구: 이 자리를 비운다 (occupied_count -1)
         option.release();
@@ -376,7 +377,8 @@ public class GroupBuyService {
         }
 
         // 5) 결제 (스텁: 항상 성공). 실패 시 예외 → 트랜잭션 롤백
-        paymentPort.pay(memberSeq, optionFinalPrice(groupBuy, option));
+        //    승격자는 participation이 이미 존재하므로 그 seq로 결제(order_item.participation_seq 연결)
+        paymentPort.pay(buildPaymentCommand(groupBuy, option, participation.getSeq(), memberSeq));
 
         // 6) 확정: PAYMENT_PENDING → PARTICIPATING. occupied_count는 이미 점유돼 있어 변동 없음.
         participation.confirmPayment();
@@ -479,7 +481,7 @@ public class GroupBuyService {
             // 무산: 공구 FAILED + 결제 완료자 전원 환불 후 FAILED (전원 일괄 결제취소)
             groupBuy.fail(now);
             participating.forEach(p -> {
-                paymentPort.cancel(p.getMemberSeq(), optionFinalPrice(groupBuy, p.getGroupBuyOptions()));
+                paymentPort.refund(p.getSeq()); // 환불액은 order_item.final_price 스냅샷 사용(역산 X)
                 p.fail();
             });
         }
@@ -512,6 +514,26 @@ public class GroupBuyService {
     private int optionFinalPrice(GroupBuy groupBuy, GroupBuyOptions option) {
         Integer additional = option.getOptions() != null ? option.getOptions().getAdditionalPrice() : null;
         return groupBuy.getFinalPrice() + (additional != null ? additional : 0);
+    }
+
+    /**
+     * 공구 참여/승격 결제 요청(GroupBuyPaymentCommand)을 만든다. 가격은 모두 구매 시점 스냅샷이다.
+     * final = 공구 할인가 + 옵션 추가금, original = 공구 정가 + 옵션 추가금,
+     * 할인액 = original - final (= 공구 정가 - 공구 할인가, 옵션 무관 일정).
+     */
+    private GroupBuyPaymentCommand buildPaymentCommand(GroupBuy groupBuy, GroupBuyOptions option,
+                                                       Long participationSeq, Long memberSeq) {
+        int finalPrice = optionFinalPrice(groupBuy, option);          // 할인가 + 옵션 추가금
+        int additional = finalPrice - groupBuy.getFinalPrice();       // 옵션 추가금
+        int originalPrice = groupBuy.getOriginalPrice() + additional; // 정가 + 옵션 추가금
+        return new GroupBuyPaymentCommand(
+                memberSeq,
+                participationSeq,
+                option.getOptions() != null ? option.getOptions().getSeq() : null,
+                originalPrice,
+                finalPrice,
+                originalPrice - finalPrice
+        );
     }
 
     /** 공구 목록 조회. */
