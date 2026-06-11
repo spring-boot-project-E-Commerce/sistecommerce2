@@ -88,6 +88,22 @@ public class CustomRememberMeServices extends AbstractRememberMeServices {
         log.debug("자동로그인 토큰 발급·쿠키 설정 - memberSeq: {}", userDetails.getMemberSeq());
     }
 
+    /**
+     * 로그아웃 시 호출 (AbstractRememberMeServices 가 LogoutHandler 로 자동 등록됨).
+     * DB의 자동로그인 토큰을 전체 무효화한 뒤, 쿠키도 폐기한다.
+     */
+    @Override
+    public void logout(HttpServletRequest request,
+                       HttpServletResponse response,
+                       Authentication authentication) {
+        if (authentication != null
+                && authentication.getPrincipal() instanceof CustomUserDetails userDetails) {
+            tokenService.invalidateAll(userDetails.getMemberSeq());
+            log.debug("로그아웃 - 자동로그인 토큰 전체 무효화. memberSeq: {}", userDetails.getMemberSeq());
+        }
+        super.logout(request, response, authentication); // 쿠키 폐기
+    }
+
     /** User-Agent 기반 단순 디바이스 지문 (200자 제한) */
     private String fingerprint(HttpServletRequest request) {
         String ua = request.getHeader("User-Agent");
