@@ -1,6 +1,6 @@
-select * from options where seq = 3312;
+select * from options where seq = 1;
 
-select * from PRODUCT where SEQ = 1678;
+select * from PRODUCT where SEQ = 1;
 
 select * from COUPON;
 
@@ -10,13 +10,15 @@ select * from DELIVERY_ADDRESS;
 
 select * from MEMBER where seq = 9;
 
-select * from CART where ;
+select * from CART;
 
 select * from orders order by seq desc;
 
 select * from orders where MEMBER_SEQ = 9 order by seq desc;
 
 select * from ORDER_ITEM order by seq desc;
+
+select * from login_log;
 
 select * from seller;
 
