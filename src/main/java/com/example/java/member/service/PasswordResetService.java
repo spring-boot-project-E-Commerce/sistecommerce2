@@ -25,6 +25,7 @@ public class PasswordResetService {
     private final EmailTokenRepository emailTokenRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final RememberMeTokenService rememberMeTokenService;
 
     /**
      * 아이디 + 이메일로 회원 조회 후 PW_RESET 토큰 발급 & 메일 발송
@@ -96,8 +97,12 @@ public class PasswordResetService {
             throw new IllegalArgumentException("만료된 링크입니다. 다시 요청해 주세요.");
         }
 
-        emailToken.getMember().updatePassword(passwordEncoder.encode(newPassword));
+        Member member = emailToken.getMember();
+        member.updatePassword(passwordEncoder.encode(newPassword));
         emailToken.markUsed();
+
+        // 비밀번호 변경 시 기존 자동로그인 토큰 전체 무효화 (탈취 대비)
+        rememberMeTokenService.invalidateAll(member.getSeq());
     }
 
     private String sha256(String input) {

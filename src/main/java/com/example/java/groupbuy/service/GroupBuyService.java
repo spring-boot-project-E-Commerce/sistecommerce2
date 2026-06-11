@@ -214,7 +214,8 @@ public class GroupBuyService {
         // 명시적 save 불필요: 락으로 조회한 option은 영속 상태라 commit 시 변경감지로 UPDATE 됨.
 
         // 결제(현재 스텁: 항상 성공). 실패 시 예외 → 트랜잭션 롤백으로 점유도 원복
-        paymentPort.pay(memberSeq, groupBuy.getFinalPrice());
+        // 옵션별 가격 = 공구 기준 할인가 + 그 옵션의 추가금(additional_price)
+        paymentPort.pay(memberSeq, optionFinalPrice(groupBuy, option));
 
         // 참여 INSERT (정규 참여라 paymentDeadline/promotedAt은 null)
         participationRepository.save(Participation.builder()
@@ -280,7 +281,8 @@ public class GroupBuyService {
 
         // 5) 취소 확정 + 환불 (위 상태검사로 환불은 1회만 보장됨)
         participation.cancel(); // status → CANCELLED (변경감지로 UPDATE)
-        paymentPort.cancel(memberSeq, groupBuy.getFinalPrice());
+        // 환불액 = 참여 시 낸 옵션별 가격(공구가 + 그 옵션 추가금). participation의 옵션으로 역산.
+        paymentPort.cancel(memberSeq, optionFinalPrice(groupBuy, option));
 
         // 6) 점유 복구: 이 자리를 비운다 (occupied_count -1)
         option.release();
@@ -333,13 +335,14 @@ public class GroupBuyService {
      * 흐름:
      *  1) 결제대기(PAYMENT_PENDING) 참여 조회 → 없으면 거부
      *  2) 옵션 행 락 → 만료 처리(스케줄러)·취소와 직렬화
-     *  3) refresh로 상태 재확인 → 그 사이 만료(FAILED)되거나 이미 결제됐으면 거부 (중복 결제 방지)
+     *  3) refresh로 상태 재확인 → 그 사이 만료(FAILED)되거나 
+     *  이미 결제됐으면 거부 (중복 결제 방지)
      *  4) 공구 ONGOING + 결제기한(now ≤ payment_deadline) 검증
      *  5) 결제(스텁) — 실패 시 예외로 롤백
      *  6) 상태 전이 PAYMENT_PENDING → PARTICIPATING
      *
-     * @param groupBuySeq 결제할 공구 seq
-     * @param memberSeq   승격된 회원 seq
+     * 	@param groupBuySeq 결제할 공구 seq
+     * 	@param memberSeq   승격된 회원 seq
      */
     @Transactional
     public void confirmPromotedPayment(Long groupBuySeq, Long memberSeq) {
@@ -373,7 +376,7 @@ public class GroupBuyService {
         }
 
         // 5) 결제 (스텁: 항상 성공). 실패 시 예외 → 트랜잭션 롤백
-        paymentPort.pay(memberSeq, groupBuy.getFinalPrice());
+        paymentPort.pay(memberSeq, optionFinalPrice(groupBuy, option));
 
         // 6) 확정: PAYMENT_PENDING → PARTICIPATING. occupied_count는 이미 점유돼 있어 변동 없음.
         participation.confirmPayment();
@@ -476,10 +479,39 @@ public class GroupBuyService {
             // 무산: 공구 FAILED + 결제 완료자 전원 환불 후 FAILED (전원 일괄 결제취소)
             groupBuy.fail(now);
             participating.forEach(p -> {
-                paymentPort.cancel(p.getMemberSeq(), groupBuy.getFinalPrice());
+                paymentPort.cancel(p.getMemberSeq(), optionFinalPrice(groupBuy, p.getGroupBuyOptions()));
                 p.fail();
             });
         }
+    }
+
+    /**
+     * 공구 시작 처리 (스케줄러가 시작 시각 지난 예정 공구마다 호출). SCHEDULED → ONGOING.
+     *
+     * @param groupBuySeq 시작할 공구 seq
+     */
+    @Transactional
+    public void open(Long groupBuySeq) {
+        GroupBuy groupBuy = groupBuyRepository.findById(groupBuySeq).orElse(null);
+        // SCHEDULED 공구만 시작. status 변경으로 다음 틱에는 자동으로 걸러져 중복 처리가 방지된다.
+        if (groupBuy == null || groupBuy.getStatus() != GroupBuyStatus.SCHEDULED) {
+            return;
+        }
+        // 시작 시각 도래 방어 (스케줄러가 거르지만 직접 호출 대비)
+        if (LocalDateTime.now().isBefore(groupBuy.getStartAt())) {
+            return;
+        }
+        groupBuy.open(); // SCHEDULED → ONGOING (변경감지로 UPDATE)
+    }
+
+    /**
+     * 옵션별 실제 공구 결제가 = 공구 기준 할인가(final_price) + 그 옵션의 추가금(options.additional_price).
+     * 팀 합의: 제일 싼 옵션을 기준가로 두고 additional_price(0 이상)로 옵션별 가격차를 표현한다.
+     * 결제·환불에서 공통으로 쓴다(참여/승격결제/취소/무산환불 모두 이 가격 기준).
+     */
+    private int optionFinalPrice(GroupBuy groupBuy, GroupBuyOptions option) {
+        Integer additional = option.getOptions() != null ? option.getOptions().getAdditionalPrice() : null;
+        return groupBuy.getFinalPrice() + (additional != null ? additional : 0);
     }
 
     /** 공구 목록 조회. */
@@ -524,7 +556,7 @@ public class GroupBuyService {
                 .orElseThrow(() -> new IllegalArgumentException("공구를 찾을 수 없습니다. seq=" + seq));
 
         List<GroupBuyOptionView> options = groupBuyOptionsRepository.findByGroupBuySeq(seq).stream()
-                .map(GroupBuyOptionView::from)
+                .map(opt -> GroupBuyOptionView.from(opt, g.getFinalPrice()))
                 .toList();
 
         long remain = remainSeconds(g.getEndAt(), LocalDateTime.now());
