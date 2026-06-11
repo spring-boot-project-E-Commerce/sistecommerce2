@@ -117,6 +117,7 @@
                             인증확인
                         </button>
                     </div>
+                    <span id="email-timer" class="hidden text-xs font-bold text-amber-600 mt-1"></span>
                     <p id="email-code-msg" class="text-xs mt-1"></p>
                 </div>
 
@@ -305,6 +306,36 @@
 
     // ── 이메일 인증 ─────────────────────────────────
     let emailVerified = false;
+    let emailTimerId = null;
+
+    function startEmailTimer(seconds) {
+        clearInterval(emailTimerId);
+        const timerEl = document.getElementById('email-timer');
+        let remaining = seconds;
+        const render = () => {
+            const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+            const s = String(remaining % 60).padStart(2, '0');
+            timerEl.textContent = '남은 시간 ' + m + ':' + s;
+        };
+        timerEl.classList.remove('hidden');
+        render();
+        emailTimerId = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                clearInterval(emailTimerId);
+                timerEl.textContent = '인증 시간이 만료되었습니다. 다시 요청해 주세요.';
+                document.getElementById('email-verify-btn').disabled = true;
+            } else {
+                render();
+            }
+        }, 1000);
+    }
+
+    function stopEmailTimer() {
+        clearInterval(emailTimerId);
+        const timerEl = document.getElementById('email-timer');
+        if (timerEl) timerEl.classList.add('hidden');
+    }
 
     function sendEmailCode() {
         const email = document.getElementById('email').value.trim();
@@ -324,6 +355,8 @@
             setMsg('email-msg', data.message, !!data.success);
             if (data.success) {
                 document.getElementById('email-code-row').classList.remove('hidden');
+                document.getElementById('email-verify-btn').disabled = false;
+                startEmailTimer(300); // 5분 카운트다운
             }
         })
         .catch(() => setMsg('email-msg', '발송 중 오류가 발생했습니다.', false))
@@ -344,6 +377,7 @@
             emailVerified = !!data.verified;
             setMsg('email-code-msg', data.message, emailVerified);
             if (emailVerified) {
+                stopEmailTimer();
                 document.getElementById('email').readOnly = true;
                 document.getElementById('email-code').readOnly = true;
                 document.getElementById('email-send-btn').disabled = true;
@@ -356,6 +390,7 @@
     // 이메일 실시간 검사 + 변경 시 인증상태 초기화
     document.getElementById('email').addEventListener('input', function () {
         emailVerified = false;
+        stopEmailTimer();
         document.getElementById('email-code-row').classList.add('hidden');
         setMsg('email-code-msg', '', true);
         const val = this.value;
