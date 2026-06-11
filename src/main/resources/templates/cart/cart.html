@@ -26,14 +26,19 @@
                 </a>
             </div>
 
+            <!-- th:data-* 로 JS에서 필요한 값 전달 -->
             <div th:each="item : ${cartList}"
-                 class="flex items-center gap-4 p-5 border-b border-gray-100">
+                 class="cart-row flex items-center gap-4 p-5 border-b border-gray-100"
+                 th:data-seq="${item.seq}"
+                 th:data-unit-price="${item.price + item.additionalPrice}"
+                 th:data-stock="${item.stock}">
 
                 <input type="checkbox"
                        name="cartSeq"
                        th:value="${item.seq}"
                        checked
-                       class="cart-check w-5 h-5 accent-amber-500">
+                       class="cart-check w-5 h-5 accent-amber-500"
+                       onchange="recalcTotal()">
 
                 <div class="w-24 h-24 bg-gray-50 shrink-0 overflow-hidden">
                     <img th:src="${item.thumbnailUrl}"
@@ -54,34 +59,41 @@
 
                     <div class="mt-2 flex items-center border border-gray-300 w-fit">
                         <button type="button"
-                                class="px-2.5 py-1 text-gray-500 hover:bg-gray-50">
+                                class="qty-minus px-2.5 py-1 text-gray-500 hover:bg-gray-50">
                             −
                         </button>
 
                         <input type="text"
                                th:value="${item.quantity}"
-                               class="w-10 text-center text-sm border-x border-gray-300 py-1"
+                               class="qty-input w-10 text-center text-sm border-x border-gray-300 py-1"
                                readonly>
 
                         <button type="button"
-                                class="px-2.5 py-1 text-gray-500 hover:bg-gray-50">
+                                class="qty-plus px-2.5 py-1 text-gray-500 hover:bg-gray-50">
                             +
                         </button>
                     </div>
                 </div>
 
                 <div class="text-right">
-                    <p class="text-lg font-black"
+                    <p class="item-total text-lg font-black"
                        th:text="${#numbers.formatInteger(item.itemTotal, 0, 'COMMA')} + '원'">
                         0원
                     </p>
 
                     <button type="button"
-                            class="mt-2 text-gray-300 hover:text-red-500">
+                            class="btn-delete mt-2 text-gray-300 hover:text-red-500">
                         <i data-lucide="trash-2" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
+        </div>
+
+        <!-- 전체 합계 -->
+        <div th:if="${!#lists.isEmpty(cartList)}"
+             class="bg-white border border-gray-200 border-t-0 px-5 py-4 flex justify-between items-center">
+            <span class="text-sm text-gray-500 font-semibold">선택 상품 합계</span>
+            <span id="totalPrice" class="text-xl font-black text-slate-900">0원</span>
         </div>
 
         <div class="flex justify-center mt-8">
@@ -100,14 +112,76 @@
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 
 <script>
+    // ── 합계 재계산 ──────────────────────────────────────────
+    function recalcTotal() {
+        let total = 0;
+        document.querySelectorAll(".cart-row").forEach(row => {
+            const checked   = row.querySelector(".cart-check").checked;
+            const unitPrice = parseInt(row.dataset.unitPrice, 10);
+            const qty       = parseInt(row.querySelector(".qty-input").value, 10);
+            if (checked) total += unitPrice * qty;
+        });
+        const el = document.getElementById("totalPrice");
+        if (el) el.textContent = total.toLocaleString("ko-KR") + "원";
+    }
+
+    // ── 수량 변경 ────────────────────────────────────────────
+    function changeQuantity(row, delta) {
+        const cartSeq   = row.dataset.seq;
+        const stock     = parseInt(row.dataset.stock, 10);
+        const input     = row.querySelector(".qty-input");
+        const unitPrice = parseInt(row.dataset.unitPrice, 10);
+        let   qty       = parseInt(input.value, 10) + delta;
+
+        if (qty < 1) return;
+        if (qty > stock) { alert("재고(" + stock + "개)를 초과할 수 없습니다."); return; }
+
+        fetch(`/api/cart/${cartSeq}`, {
+            method : "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body   : JSON.stringify({ quantity: qty })
+        })
+        .then(res => {
+            if (!res.ok) return res.text().then(t => { throw new Error(t); });
+            input.value = qty;
+            row.querySelector(".item-total").textContent =
+                (unitPrice * qty).toLocaleString("ko-KR") + "원";
+            recalcTotal();
+        })
+        .catch(err => alert(err.message || "수량 변경 실패"));
+    }
+
+    // ── 항목 삭제 ────────────────────────────────────────────
+    function deleteItem(row) {
+        if (!confirm("장바구니에서 삭제하시겠습니까?")) return;
+        const cartSeq = row.dataset.seq;
+
+        fetch(`/api/cart/${cartSeq}`, { method: "DELETE" })
+        .then(res => {
+            if (!res.ok) return res.text().then(t => { throw new Error(t); });
+            row.remove();
+            recalcTotal();
+        })
+        .catch(err => alert(err.message || "삭제 실패"));
+    }
+
+    // ── 이벤트 바인딩 ────────────────────────────────────────
+    document.querySelectorAll(".cart-row").forEach(row => {
+        row.querySelector(".qty-minus").addEventListener("click", () => changeQuantity(row, -1));
+        row.querySelector(".qty-plus" ).addEventListener("click", () => changeQuantity(row, +1));
+        row.querySelector(".btn-delete").addEventListener("click", () => deleteItem(row));
+    });
+
+    // ── 페이지 진입 시 초기 합계 계산 ────────────────────────
+    recalcTotal();
+
+    // ── 구매하기 유효성 검사 ─────────────────────────────────
     function validateCartSelection() {
         const checkedItems = document.querySelectorAll(".cart-check:checked");
-
         if (checkedItems.length === 0) {
             alert("결제할 상품을 1개 이상 선택해 주세요.");
             return false;
         }
-
         return true;
     }
 </script>
