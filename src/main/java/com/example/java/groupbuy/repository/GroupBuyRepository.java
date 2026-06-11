@@ -15,4 +15,11 @@ public interface GroupBuyRepository extends JpaRepository<GroupBuy, Long> {
      * 스케줄러가 이 목록을 받아 각 공구를 개별 트랜잭션(close)으로 확정/무산 판정한다.
      */
     List<GroupBuy> findByStatusAndEndAtBefore(GroupBuyStatus status, LocalDateTime endAt);
+
+    /**
+     * 시작 시각이 지난 시작 전(SCHEDULED) 공구 목록 (시작 전이 스케줄러용).
+     *   By Status          → WHERE status = ?     (SCHEDULED)
+     *   And StartAtBefore   → AND start_at < ?     (시작 시각 도래)
+     */
+    List<GroupBuy> findByStatusAndStartAtBefore(GroupBuyStatus status, LocalDateTime startAt);
 }

@@ -68,6 +68,13 @@ public class GroupBuy {
     private GroupBuyStatus status;
 
     /**
+     * 공구 시작: 시작 시각이 도래해 모집을 개시한다. SCHEDULED → ONGOING.
+     */
+    public void open() {
+        this.status = GroupBuyStatus.ONGOING;
+    }
+
+    /**
      * 마감 확정: 최소 인원을 달성해 공구가 성사됨. ONGOING → CONFIRMED.
      * finishedAt에 실제 마감 처리 시각을 기록한다.
      */
