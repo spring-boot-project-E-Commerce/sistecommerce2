@@ -64,7 +64,7 @@ public class CartApiController {
 
     /** 수량 변경: PATCH /api/cart/{seq}  body: {"quantity": N} */
     @PatchMapping("/{seq}")
-    public ResponseEntity<?> updateQuantity(@PathVariable Long seq,
+    public ResponseEntity<?> updateQuantity(@PathVariable("seq") Long seq,
                                             @RequestBody Map<String, Integer> body,
                                             @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails == null) {
@@ -82,7 +82,7 @@ public class CartApiController {
 
     /** 항목 삭제: DELETE /api/cart/{seq} */
     @DeleteMapping("/{seq}")
-    public ResponseEntity<?> removeItem(@PathVariable Long seq,
+    public ResponseEntity<?> removeItem(@PathVariable("seq") Long seq,
                                         @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails == null) {
             return ResponseEntity.status(401).body("로그인이 필요합니다.");
