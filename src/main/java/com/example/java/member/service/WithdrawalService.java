@@ -15,6 +15,7 @@ import com.example.java.member.repository.MemberRepository;
 import com.example.java.member.repository.MemberStatusLogRepository;
 import com.example.java.member.repository.MemberWithdrawalRepository;
 import com.example.java.member.repository.WithdrawalReasonRepository;
+import com.example.java.member.util.MaskingUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -145,6 +146,34 @@ public class WithdrawalService {
 
         log.info("탈퇴 확정 마스킹 - memberSeq: {}, 최종파기예정: {}",
                 member.getSeq(), withdrawal.getScheduledDeleteAt());
+    }
+
+    /** 5년 보존 경과한 확정 탈퇴(최종 파기 대상) 레코드 seq 목록 */
+    @Transactional(readOnly = true)
+    public List<Long> findFinalPurgeSeqs(LocalDate today) {
+        return memberWithdrawalRepository
+                .findByWithdrawalYnAndScheduledDeleteAtLessThanEqual(MemberWithdrawal.YN_Y, today)
+                .stream()
+                .map(MemberWithdrawal::getSeq)
+                .toList();
+    }
+
+    /**
+     * 최종 파기(1건). 보존기간(5년) 경과한 member_withdrawal 의 원본 식별정보를
+     * 비가역 마스킹값으로 덮어쓴다. member row 는 건드리지 않는다(이미 확정 시 마스킹됨).
+     * 이미 파기된 건은 스킵(멱등).
+     */
+    @Transactional
+    public void purge(Long withdrawalSeq) {
+        MemberWithdrawal withdrawal = memberWithdrawalRepository.findById(withdrawalSeq)
+                .orElseThrow(() -> new IllegalArgumentException("탈퇴 분리보관 레코드 없음: " + withdrawalSeq));
+
+        if (MaskingUtil.MASK.equals(withdrawal.getUsername())) {
+            return; // 이미 파기됨
+        }
+
+        withdrawal.purge(MaskingUtil.MASK);
+        log.info("탈퇴 분리보관 최종 파기 - withdrawalSeq: {}", withdrawalSeq);
     }
 
     /** 탈퇴 화면 표시용 조회: 현재 상태 + (보류중이면) 유예 만료일 + 사유 목록 */
