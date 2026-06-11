@@ -137,7 +137,7 @@ public class GroupBuyAdminService {
         for (GroupBuy gb : groupBuys) {
             // 진행 중 또는 시작 대기 상태인 공동구매만 강제 중지 처리
             if (gb.getStatus() == GroupBuyStatus.ONGOING || gb.getStatus() == GroupBuyStatus.SCHEDULED) {
-                // gb.forceStop(now); // 엔티티 충돌 방지를 위해 주석 처리
+                gb.forceStop(now);
 
                 // 1) 결제 완료 참여자 환불 및 무산 처리
                 List<Participation> participations = participationRepository
