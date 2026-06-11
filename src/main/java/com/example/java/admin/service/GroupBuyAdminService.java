@@ -144,7 +144,7 @@ public class GroupBuyAdminService {
                         .findByGroupBuySeqAndStatus(gb.getSeq(), ParticipationStatus.PARTICIPATING);
                 
                 for (Participation p : participations) {
-                    paymentPort.cancel(p.getMemberSeq(), optionFinalPrice(gb, p.getGroupBuyOptions()));
+                    paymentPort.refund(p.getSeq()); // 환불액은 order_item.final_price 스냅샷 사용(역산 X)
                     p.fail();
                 }
 
@@ -154,10 +154,5 @@ public class GroupBuyAdminService {
                         .forEach(Participation::expire);
             }
         }
-    }
-
-    private int optionFinalPrice(GroupBuy groupBuy, GroupBuyOptions option) {
-        Integer additional = option.getOptions() != null ? option.getOptions().getAdditionalPrice() : null;
-        return groupBuy.getFinalPrice() + (additional != null ? additional : 0);
     }
 }

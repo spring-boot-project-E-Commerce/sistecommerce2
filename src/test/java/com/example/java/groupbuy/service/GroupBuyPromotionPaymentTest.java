@@ -2,8 +2,8 @@ package com.example.java.groupbuy.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -124,7 +124,7 @@ class GroupBuyPromotionPaymentTest {
 
         // then: PAYMENT_PENDING → PARTICIPATING, 결제 1회, 점유 수 변동 없음
         assertThat(statusOf(gb, 9L)).as("결제로 참여 확정").isEqualTo(ParticipationStatus.PARTICIPATING);
-        verify(paymentPort, times(1)).pay(eq(9L), anyInt());
+        verify(paymentPort, times(1)).pay(argThat(c -> c.memberSeq() == 9L));
 
         GroupBuyOptions after = groupBuyOptionsRepository.findById(opt).orElseThrow();
         assertThat(after.getOccupiedCount()).as("승격 때 이미 점유 → 결제로는 점유 수 불변").isEqualTo(1);
@@ -144,7 +144,7 @@ class GroupBuyPromotionPaymentTest {
                 .hasMessageContaining("결제 기한");
 
         assertThat(statusOf(gb, 9L)).as("여전히 결제대기 (확정 안 됨)").isEqualTo(ParticipationStatus.PAYMENT_PENDING);
-        verify(paymentPort, times(0)).pay(eq(9L), anyInt());
+        verify(paymentPort, times(0)).pay(argThat(c -> c.memberSeq() == 9L));
     }
 
     @Test
@@ -159,7 +159,7 @@ class GroupBuyPromotionPaymentTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("결제 대기");
 
-        verify(paymentPort, times(0)).pay(eq(9L), anyInt());
+        verify(paymentPort, times(0)).pay(argThat(c -> c.memberSeq() == 9L));
     }
 
     @Test
@@ -182,6 +182,6 @@ class GroupBuyPromotionPaymentTest {
         GroupBuyOptions after = groupBuyOptionsRepository.findById(opt).orElseThrow();
         assertThat(after.getOccupiedCount()).as("점유 유지 (release -1 + 승격 +1 = 0)").isEqualTo(1);
 
-        verify(paymentPort, times(0)).cancel(eq(9L), anyInt()); // 결제 전이라 환불 없음
+        verify(paymentPort, times(0)).refund(anyLong()); // 결제 전이라 환불 없음
     }
 }
