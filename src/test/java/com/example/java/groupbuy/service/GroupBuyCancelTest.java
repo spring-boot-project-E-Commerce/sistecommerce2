@@ -2,8 +2,7 @@ package com.example.java.groupbuy.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -216,7 +215,7 @@ class GroupBuyCancelTest {
 
         // then
         assertThat(finished).as("모든 스레드 종료").isTrue();
-        verify(paymentPort, times(1)).cancel(eq(1L), anyInt()); // 환불은 정확히 1회 (NFR-004)
+        verify(paymentPort, times(1)).refund(anyLong()); // 환불은 정확히 1회 (NFR-004)
         assertThat(statusOf(gb, 1L)).as("취소자는 CANCELLED").isEqualTo(ParticipationStatus.CANCELLED);
         assertThat(statusOf(gb, 3L)).as("승격은 한 번만 (대기자 1명 승격)").isEqualTo(ParticipationStatus.PAYMENT_PENDING);
 

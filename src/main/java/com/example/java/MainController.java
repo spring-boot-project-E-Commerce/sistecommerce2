@@ -10,16 +10,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.example.java.member.security.CustomUserDetails;
+import com.example.java.retail.service.RetailRecommendationService;
 
 @Controller
 @RequiredArgsConstructor
 public class MainController {
 
     private final ProductListService productListService;
+    private final RetailRecommendationService retailRecommendationService;
 
     // 메인 화면 (COM-MAIN-01). auth 는 GlobalModelAdvice 가 주입한다.
     @GetMapping("/")
-    public String index(Model model) {
+    public String index(@AuthenticationPrincipal CustomUserDetails auth, Model model) {
         model.addAttribute("groupBuys", SampleProducts.groupBuys());
         
         // 실제 진행중인 핫딜 상품 목록 조회 (상위 4개)
@@ -33,6 +37,11 @@ public class MainController {
                 .limit(4)
                 .collect(Collectors.toList());
         model.addAttribute("populars", populars);
+        
+        // 맞춤형 AI 추천 상품 가져오기
+        Long memberSeq = (auth != null) ? auth.getMemberSeq() : null;
+        List<ProductDto> recommendations = retailRecommendationService.recommendProducts(memberSeq);
+        model.addAttribute("recommendations", recommendations);
         
         return "index";
     }
