@@ -18,6 +18,8 @@ select * from orders where MEMBER_SEQ = 9 order by seq desc;
 
 select * from ORDER_ITEM order by seq desc;
 
+select * from login_log;
+
 select * from seller;
 
 select * from PAYMENT;
