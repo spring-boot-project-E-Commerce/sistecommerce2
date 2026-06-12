@@ -16,6 +16,11 @@ public interface OrdersQueryRepository {
      * 로그인 회원이 발급받은 사용 가능한 쿠폰 목록 조회.
      */
     List<CouponDto> findAvailableCouponsByMemberSeq(Long memberSeq);
+    
+    /**
+     * 상품 상세 화면의 바로구매용 상품 조회.
+     */
+    CheckoutItemDto findCheckoutItemByOptionsSeq(Long optionsSeq, Integer quantity);
 
     /**
      * 선택한 member_coupon.seq가 실제 로그인 회원의 사용 가능한 쿠폰인지 검증 후 조회.

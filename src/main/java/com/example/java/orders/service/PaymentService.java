@@ -586,6 +586,11 @@ public class PaymentService {
     }
 
     private void deleteOrderedCartItems(Orders order) {
+    	
+    	if ("DIRECT".equals(order.getField())) {
+            return;
+        }
+    	
         List<Long> orderedOptionsSeqList = orderItemRepository.findByOrderSeq(order.getSeq())
                 .stream()
                 .map(OrderItem::getOptionsSeq)

@@ -41,8 +41,7 @@ public class OrdersCommandService {
         /*
             체크한 장바구니 상품만 조회한다.
          */
-        List<CheckoutItemDto> items =
-                ordersViewService.getCheckoutItems(memberSeq, requestDto.getCartSeq());
+        List<CheckoutItemDto> items = getCheckoutItemsByRequest(requestDto, memberSeq);
 
         if (items.isEmpty()) {
             throw new IllegalStateException("선택한 장바구니 상품이 없습니다.");
@@ -53,10 +52,10 @@ public class OrdersCommandService {
             화면에서 넘어온 amount는 신뢰하지 않는다.
          */
         PriceSummaryDto priceSummary =
-                ordersViewService.getPriceSummary(
+                ordersViewService.getPriceSummaryByItems(
                         memberSeq,
                         requestDto.getMemberCouponSeq(),
-                        requestDto.getCartSeq()
+                        items
                 );
 
         DeliveryInfo deliveryInfo = resolveDeliveryInfo(requestDto, memberSeq);
@@ -73,6 +72,7 @@ public class OrdersCommandService {
                 .memberSeq(memberSeq)
                 .memberCouponSeq(requestDto.getMemberCouponSeq())
                 .orderUid(orderUid)
+                .field(Boolean.TRUE.equals(requestDto.getDirectBuy()) ? "DIRECT" : "CART")
                 .productTotalPrice(productTotalPrice)
                 .couponDiscount(totalCouponDiscount)
                 .hotdealDiscount(hotdealDiscount)
@@ -101,6 +101,19 @@ public class OrdersCommandService {
                 orderName
         );
     }
+    
+    private List<CheckoutItemDto> getCheckoutItemsByRequest(CheckoutRequestDto requestDto,
+            Long memberSeq) {
+
+		if (Boolean.TRUE.equals(requestDto.getDirectBuy())) {
+		return ordersViewService.getDirectCheckoutItems(
+		requestDto.getOptionsSeq(),
+		requestDto.getQuantity()
+		);
+		}
+		
+		return ordersViewService.getCheckoutItems(memberSeq, requestDto.getCartSeq());
+	}
 
     private void validateCheckoutRequest(CheckoutRequestDto requestDto,
                                          Long memberSeq) {
@@ -109,8 +122,18 @@ public class OrdersCommandService {
             throw new IllegalArgumentException("로그인 회원 번호가 없습니다.");
         }
 
-        if (requestDto.getCartSeq() == null || requestDto.getCartSeq().isEmpty()) {
-            throw new IllegalArgumentException("결제할 장바구니 상품을 선택해야 합니다.");
+        if (Boolean.TRUE.equals(requestDto.getDirectBuy())) {
+            if (requestDto.getOptionsSeq() == null) {
+                throw new IllegalArgumentException("바로구매할 상품 옵션을 선택해야 합니다.");
+            }
+
+            if (requestDto.getQuantity() == null || requestDto.getQuantity() < 1) {
+                throw new IllegalArgumentException("구매 수량은 1개 이상이어야 합니다.");
+            }
+        } else {
+            if (requestDto.getCartSeq() == null || requestDto.getCartSeq().isEmpty()) {
+                throw new IllegalArgumentException("결제할 장바구니 상품을 선택해야 합니다.");
+            }
         }
 
         if (requestDto.getAgreeRequired() == null || !requestDto.getAgreeRequired()) {
