@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.java.common.notification.service.NotificationService;
 import com.example.java.groupbuy.dto.GroupBuyDetailResponse;
 import com.example.java.groupbuy.dto.GroupBuyDto;
 import com.example.java.groupbuy.dto.GroupBuyOptionView;
@@ -51,6 +52,7 @@ public class GroupBuyService {
     private final WaitingQueueRepository waitingQueueRepository;
     private final GroupBuyPaymentPort paymentPort;
     private final OrdersCommandService ordersCommandService;
+    private final NotificationService notificationService;
 
     // ProductRepository가 dev에서 class(EntityManager 직접 구현)로 바뀌어 
     // JpaRepository 메서드가 없음.
@@ -300,6 +302,7 @@ public class GroupBuyService {
         participation.cancel(); // status → CANCELLED (변경감지로 UPDATE)
         // 환불 = participationSeq로 원주문(order_item)을 찾아 PG 취소. 금액은 order_item.final_price 스냅샷 사용(역산 X).
         paymentPort.refund(participation.getSeq());
+        notificationService.notifyRefundDone(participation);
 
         // 6) 점유 복구: 이 자리를 비운다 (occupied_count -1)
         option.release();
@@ -495,7 +498,10 @@ public class GroupBuyService {
         if (participating.size() >= groupBuy.getMinCount()) {
             // 확정: 공구 + 결제 완료자 전원 CONFIRMED (환불 없음 — 성사됐으니 결제 유지)
             groupBuy.confirm(now);
-            participating.forEach(Participation::confirm);
+            participating.forEach(p -> {
+                p.confirm();
+                notificationService.notifyGroupBuyConfirmed(p);
+            });
         } else {
             // 무산: 공구 FAILED + 결제 완료자 전원 환불 후 FAILED (전원 일괄 결제취소)
             groupBuy.fail(now);
@@ -504,10 +510,13 @@ public class GroupBuyService {
                 // 실패 건은 로그로 남기고 FAILED 처리는 진행 — 환불 재시도는 별도 처리(미구현).
                 try {
                     paymentPort.refund(p.getSeq()); // 환불액은 order_item.final_price 스냅샷 사용(역산 X)
+                    notificationService.notifyRefundDone(p);
                 } catch (Exception e) {
                     log.error("[공구 무산 환불] 환불 실패 participationSeq={} (마감은 계속 진행)", p.getSeq(), e);
+                    notificationService.notifyRefundFailed(p);
                 }
                 p.fail();
+                notificationService.notifyGroupBuyFailed(p);
             });
         }
     }
@@ -558,6 +567,7 @@ public class GroupBuyService {
             return; // 이미 확정/취소/만료됨 — 멱등(중복 결제 콜백 방어)
         }
         participation.confirmPayment(); // PAYMENT_PENDING → PARTICIPATING (변경감지로 UPDATE)
+        notificationService.notifyPaymentDone(participation);
     }
 
     private int optionFinalPrice(GroupBuy groupBuy, GroupBuyOptions option) {

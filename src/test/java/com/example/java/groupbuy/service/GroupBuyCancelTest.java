@@ -39,6 +39,9 @@ import com.example.java.orders.service.OrdersCommandService;
 
 import org.junit.jupiter.api.BeforeEach;
 
+import com.example.java.common.notification.entity.NotificationRecipientType;
+import com.example.java.common.notification.repository.NotificationRepository;
+
 /**
  * 공구 취소 + 점유 복구 + 대기열 FIFO 승격 시나리오 검증.
  *
@@ -78,6 +81,9 @@ class GroupBuyCancelTest {
 
     @Autowired
     JdbcTemplate jdbc;
+
+    @Autowired
+    NotificationRepository notificationRepository;
 
     /** 환불 횟수를 검증하려고 결제 포트를 목으로 대체(refund가 아무 동작 안 함). */
     @MockitoBean
@@ -160,6 +166,22 @@ class GroupBuyCancelTest {
         assertThat(promoted.get(0).getStatus()).as("승격자는 결제대기").isEqualTo(ParticipationStatus.PAYMENT_PENDING);
         assertThat(promoted.get(0).getPaymentDeadline()).as("승격자 결제기한 설정됨").isNotNull();
         assertThat(promoted.get(0).getPromotedAt()).as("승격 시각 설정됨").isNotNull();
+        assertThat(notificationRepository.countByRecipientTypeAndRecipientSeqAndReadAtIsNull(
+                NotificationRecipientType.MEMBER, 3L))
+                .as("승격된 회원에게 읽지 않은 알림 1건 생성")
+                .isEqualTo(1);
+
+        // 1번 회원은 결제 완료 알림(PAYMENT_DONE)과 환불 완료 알림(REFUND_DONE) 총 2건을 받아야 함
+        List<com.example.java.common.notification.entity.Notification> notifications1 = notificationRepository
+                .findByRecipientTypeAndRecipientSeqOrderByCreatedAtDesc(NotificationRecipientType.MEMBER, 1L);
+        assertThat(notifications1).hasSize(2);
+        assertThat(notifications1.get(0).getType()).isEqualTo(com.example.java.common.notification.entity.NotificationType.REFUND_DONE);
+        assertThat(notifications1.get(1).getType()).isEqualTo(com.example.java.common.notification.entity.NotificationType.PAYMENT_DONE);
+
+        // 2번 회원은 아직 결제대기(PAYMENT_PENDING) 상태이므로 알림이 없어야 함
+        List<com.example.java.common.notification.entity.Notification> notifications2 = notificationRepository
+                .findByRecipientTypeAndRecipientSeqOrderByCreatedAtDesc(NotificationRecipientType.MEMBER, 2L);
+        assertThat(notifications2).isEmpty();
 
         GroupBuyOptions after = groupBuyOptionsRepository.findById(opt).orElseThrow();
         assertThat(after.getOccupiedCount()).as("점유 수 유지 (release -1 후 승격 occupy +1 = net 0)").isEqualTo(2);
