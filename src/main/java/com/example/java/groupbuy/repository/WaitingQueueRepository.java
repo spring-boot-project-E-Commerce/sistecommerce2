@@ -30,4 +30,10 @@ public interface WaitingQueueRepository extends JpaRepository<WaitingQueue, Long
      * 대기열이 비어있으면 Optional.empty (승격할 사람 없음 → 자리만 비움).
      */
     Optional<WaitingQueue> findFirstByGroupBuyOptionsOrderByCreatedAtAsc(GroupBuyOptions groupBuyOptions);
+
+    /**
+     * 특정 옵션의 현재 대기열 인원. 게이트 reconcile에서 남은 입장 가능 수를 계산할 때 쓴다
+     * (남은입장 = (order_qty + 대기버퍼) - occupied_count - 대기인원).
+     */
+    long countByGroupBuyOptionsSeq(Long groupBuyOptionsSeq);
 }

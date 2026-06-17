@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.example.java.groupbuy.entity.GroupBuy;
 import com.example.java.groupbuy.entity.GroupBuyStatus;
+import com.example.java.groupbuy.gate.GroupBuyGateReconciler;
 import com.example.java.groupbuy.repository.GroupBuyRepository;
 import com.example.java.groupbuy.service.GroupBuyService;
 
@@ -32,6 +33,7 @@ public class GroupBuyOpenScheduler {
 
     private final GroupBuyRepository groupBuyRepository;
     private final GroupBuyService groupBuyService;
+    private final GroupBuyGateReconciler gateReconciler;
 
     /** 매분 0초 실행. 시작 시각이 지난 예정 공구를 진행중으로 전이한다. */
     @Scheduled(cron = "0 * * * * *")
@@ -46,6 +48,9 @@ public class GroupBuyOpenScheduler {
         for (GroupBuy gb : targets) {
             try {
                 groupBuyService.open(gb.getSeq());
+                // 시작 직후 즉시 게이트 시드 → 오픈 순간(플래시 세일의 가장 위험한 시점)부터 문지기 작동.
+                // (매분 reconcile만 의존하면 최대 60초 무방비 구간이 생긴다.)
+                gateReconciler.reconcileOptions(gb.getSeq());
             } catch (Exception e) {
                 // 한 공구 실패가 나머지 시작을 막지 않도록 격리하고 로그만 남긴다 (NFR-006)
                 log.error("[공구 시작] 처리 실패 groupBuySeq={}", gb.getSeq(), e);

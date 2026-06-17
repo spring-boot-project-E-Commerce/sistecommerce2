@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.java.groupbuy.dto.GroupBuyDetailResponse;
 import com.example.java.groupbuy.dto.GroupBuySummaryResponse;
 import com.example.java.groupbuy.dto.ParticipateResponse;
+import com.example.java.groupbuy.gate.GroupBuyGate;
 import com.example.java.groupbuy.ratelimit.ParticipationRateLimiter;
 import com.example.java.groupbuy.service.GroupBuyService;
 import com.example.java.member.security.CustomUserDetails;
@@ -37,6 +38,7 @@ public class GroupBuyApiController {
 
     private final GroupBuyService groupBuyService;
     private final ParticipationRateLimiter participationRateLimiter;
+    private final GroupBuyGate groupBuyGate;
 
     /** 공구 목록. */
     // GET /api/group-buys  (목록)
@@ -92,12 +94,27 @@ public class GroupBuyApiController {
                     seq, user.getMemberSeq(), clientIp);
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
+        // 플래시 세일 부하 흡수(2단 방어의 앞단): 옵션 게이트(Redis 원자 카운터)로 정원+대기버퍼를
+        // 넘는 "떨어질 다수"를 DB 비관적 락에 도달하기 전에 즉시 거른다. 통과자만 서비스로 보낸다.
+        if (!groupBuyGate.tryAdmit(optionSeq)) {
+            log.warn("공구 게이트 초과로 거절 - groupBuySeq={}, optionSeq={}, memberSeq={}, ip={}",
+                    seq, optionSeq, user.getMemberSeq(), clientIp);
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ParticipateResponse.rejected());
+        }
         // 검증·점유·자리예약·주문생성·대기열은 서비스(트랜잭션)에 위임.
         // 컨트롤러는 입력만 꺼내 넘긴다.
-        ParticipateResponse response = groupBuyService.participate(seq, optionSeq, user.getMemberSeq());
-        // 결과를 JSON으로 반환 → QUEUED(대기열) 또는 
-        // PARTICIPATED(+orderUid/amount로 토스 결제창)
-        return ResponseEntity.ok(response);
+        try {
+            ParticipateResponse response = groupBuyService.participate(seq, optionSeq, user.getMemberSeq());
+            // 결과를 JSON으로 반환 → QUEUED(대기열) 또는
+            // PARTICIPATED(+orderUid/amount로 토스 결제창)
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            // 게이트는 통과했지만 DB 처리가 실패(중복 참여·검증 실패 등)해 실제 점유/대기 등록을 못 했다.
+            // 잡아둔 게이트 토큰을 반납하고(다른 사람이 쓸 수 있게) 예외는 그대로 올려 @ExceptionHandler가 처리.
+            groupBuyGate.restore(optionSeq);
+            throw e;
+        }
     }
 
     /**
