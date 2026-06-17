@@ -6,6 +6,7 @@ package com.example.java.groupbuy.dto;
  * participate()는 선택한 옵션의 매진 여부에 따라 두 갈래로 끝난다:
  *  - PARTICIPATED : 정원이 남아 정규 참여 성공 (점유 +1 → 결제 → participation INSERT)
  *  - QUEUED       : 옵션이 매진이라 대기열(waiting_queue)에 등록됨 (결제·점유 없음)
+ *  - REJECTED     : 입장 게이트(문지기) 초과 — 정원+대기버퍼가 가득 차 DB에 닿기 전 거절됨(플래시 세일 부하 차단)
  *
  * 서비스가 void가 아니라 이 결과를 돌려주는 이유:
  * 호출하는 컨트롤러/화면이 "참여 완료"와 "대기열 등록됨"을 구분해
@@ -16,5 +17,6 @@ package com.example.java.groupbuy.dto;
  */
 public enum ParticipateResult {
     PARTICIPATED,
-    QUEUED
+    QUEUED,
+    REJECTED
 }

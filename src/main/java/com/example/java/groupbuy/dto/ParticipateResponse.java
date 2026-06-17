@@ -24,6 +24,11 @@ public record ParticipateResponse(
         return new ParticipateResponse(ParticipateResult.QUEUED, null, null, null, null);
     }
 
+    /** 입장 게이트 초과 → 혼잡으로 거절(DB 미접근). 프론트는 "잠시 후 다시 시도" 안내. */
+    public static ParticipateResponse rejected() {
+        return new ParticipateResponse(ParticipateResult.REJECTED, null, null, null, null);
+    }
+
     /** 정원 확보 → 결제 대기 주문 생성. 프론트가 orderUid/amount로 토스 결제창을 띄운다. */
     public static ParticipateResponse paymentRequired(OrderCreateResultDto order) {
         return new ParticipateResponse(
